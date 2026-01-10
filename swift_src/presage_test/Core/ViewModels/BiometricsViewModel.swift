@@ -32,7 +32,7 @@ class BiometricsViewModel: ObservableObject {
     @Published var alertnessHistory: [Double] = []
 
     // MARK: - Scan State
-    @Published var isScan ning: Bool = false
+    @Published var isScanning: Bool = false
     @Published var scanProgress: Double = 0.0
 
     // MARK: - Mock Data Mode

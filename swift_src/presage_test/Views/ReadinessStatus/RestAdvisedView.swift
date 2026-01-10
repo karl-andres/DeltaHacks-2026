@@ -185,7 +185,7 @@ struct RestAdvisedView: View {
     private var statusText: some View {
         VStack(spacing: 8) {
             Text("REST ADVISED")
-                .font(.system(size: 32, weight: .extrabold, design: .rounded))
+                .font(.system(size: 32, weight: .heavy, design: .rounded))
                 .foregroundStyle(AppTheme.Colors.textPrimary)
                 .shadow(color: .black.opacity(0.3), radius: 5)
 

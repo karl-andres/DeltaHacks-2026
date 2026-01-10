@@ -7,7 +7,7 @@
 
 import SwiftUI
 
-enum AppState {
+enum AppState: Equatable {
     case dashboard
     case scanning
     case showingResults(ReadinessStatus)
