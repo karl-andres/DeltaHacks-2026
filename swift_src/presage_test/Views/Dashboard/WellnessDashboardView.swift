@@ -11,6 +11,9 @@ struct WellnessDashboardView: View {
     @EnvironmentObject var biometricsVM: BiometricsViewModel
     @EnvironmentObject var wellnessData: WellnessDataService
 
+    @State private var isSyncing = false
+    @State private var lastSyncTime = Date()
+
     var body: some View {
         ZStack {
             // Background
@@ -140,36 +143,41 @@ struct WellnessDashboardView: View {
 
     // MARK: - Sync Wearable Button
     private var syncWearableButton: some View {
-        Button(action: {
-            // Trigger sync action
-        }) {
+        Button(action: syncWearable) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()
                         .fill(Color.white.opacity(0.1))
                         .frame(width: 40, height: 40)
 
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 20))
-                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    if isSyncing {
+                        ProgressView()
+                            .tint(AppTheme.Colors.textPrimary)
+                    } else {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 20))
+                            .foregroundStyle(AppTheme.Colors.textPrimary)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Sync Wearable")
+                    Text(isSyncing ? "Syncing..." : "Sync Wearable")
                         .font(AppTheme.Typography.callout)
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.Colors.textPrimary)
 
-                    Text("Last sync: 2 min ago")
+                    Text("Last sync: \(timeSinceLastSync)")
                         .font(AppTheme.Typography.caption)
                         .foregroundStyle(AppTheme.Colors.textTertiary)
                 }
 
                 Spacer()
 
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14))
-                    .foregroundStyle(AppTheme.Colors.textTertiary)
+                if !isSyncing {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14))
+                        .foregroundStyle(AppTheme.Colors.textTertiary)
+                }
             }
             .padding(AppTheme.Spacing.md)
             .background(.ultraThinMaterial)
@@ -177,11 +185,54 @@ struct WellnessDashboardView: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large))
             .overlay(
                 RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
-                    .stroke(AppTheme.Colors.glassBorder, lineWidth: 1)
+                    .stroke(
+                        isSyncing ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
+                        lineWidth: isSyncing ? 2 : 1
+                    )
             )
         }
+        .disabled(isSyncing)
         .padding(.horizontal, AppTheme.Spacing.md)
         .padding(.top, AppTheme.Spacing.lg)
+    }
+
+    // MARK: - Sync Action
+    private func syncWearable() {
+        withAnimation {
+            isSyncing = true
+        }
+
+        Task {
+            // Simulate syncing with wearable device
+            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+
+            await MainActor.run {
+                // Update biometrics with fresh data
+                biometricsVM.refreshMetrics()
+                lastSyncTime = Date()
+
+                withAnimation {
+                    isSyncing = false
+                }
+            }
+        }
+    }
+
+    // MARK: - Time Since Last Sync
+    private var timeSinceLastSync: String {
+        let interval = Date().timeIntervalSince(lastSyncTime)
+        let minutes = Int(interval / 60)
+
+        if minutes < 1 {
+            return "Just now"
+        } else if minutes == 1 {
+            return "1 min ago"
+        } else if minutes < 60 {
+            return "\(minutes) min ago"
+        } else {
+            let hours = minutes / 60
+            return "\(hours) hour\(hours > 1 ? "s" : "") ago"
+        }
     }
 
     // MARK: - Helper

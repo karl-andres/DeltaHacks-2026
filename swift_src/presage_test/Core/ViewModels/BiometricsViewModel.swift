@@ -163,6 +163,41 @@ class BiometricsViewModel: ObservableObject {
         readinessStatus = calculateReadinessStatus()
     }
 
+    func refreshMetrics() {
+        // Refresh biometric data from mock or SDK
+        if useMockData {
+            let mockData = MockDataGenerator.createMockBiometricsViewModel()
+            currentHeartRate = mockData.heartRate
+            currentRespirationRate = mockData.respiration
+            hrvScore = mockData.hrv
+            alertnessLevel = mockData.alertness
+
+            // Add latest values to history
+            heartRateHistory.append(Double(currentHeartRate))
+            if heartRateHistory.count > 60 {
+                heartRateHistory.removeFirst()
+            }
+
+            respirationHistory.append(Double(currentRespirationRate))
+            if respirationHistory.count > 60 {
+                respirationHistory.removeFirst()
+            }
+
+            hrvHistory.append(Double(hrvScore))
+            if hrvHistory.count > 60 {
+                hrvHistory.removeFirst()
+            }
+
+            alertnessHistory.append(alertnessLevel)
+            if alertnessHistory.count > 60 {
+                alertnessHistory.removeFirst()
+            }
+        } else {
+            // Trigger SDK refresh
+            // sdk.refreshMetrics()
+        }
+    }
+
     // MARK: - Calculations
     private func calculateMetrics() {
         // Calculate HRV (simplified RMSSD calculation)

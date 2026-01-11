@@ -9,6 +9,16 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var biometricsVM: BiometricsViewModel
+    @EnvironmentObject var authManager: AuthenticationManager
+
+    @State private var showEditProfile = false
+    @State private var showReports = false
+    @State private var showNotifications = false
+    @State private var showHelp = false
+
+    var driver: Driver? {
+        authManager.currentDriver
+    }
 
     var body: some View {
         ZStack {
@@ -88,17 +98,17 @@ struct ProfileView: View {
 
             // Name and role
             VStack(spacing: 4) {
-                Text("Driver")
+                Text(driver?.name ?? "Driver")
                     .font(AppTheme.Typography.title)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.Colors.textPrimary)
 
                 HStack(spacing: 6) {
-                    Image(systemName: "sun.max.fill")
+                    Image(systemName: driver?.shiftType.icon ?? "sun.max.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(AppTheme.Colors.primaryBlue)
 
-                    Text("Day Shift")
+                    Text(driver?.shiftType.rawValue ?? "Day Shift")
                         .font(AppTheme.Typography.callout)
                         .foregroundStyle(AppTheme.Colors.textSecondary)
                 }
@@ -114,19 +124,19 @@ struct ProfileView: View {
         HStack(spacing: 12) {
             StatCard(
                 title: "Total Shifts",
-                value: "247",
+                value: "\(driver?.totalShifts ?? 0)",
                 icon: "calendar"
             )
 
             StatCard(
                 title: "Hours Driven",
-                value: "1,842",
+                value: String(format: "%.0f", driver?.hoursDrivern ?? 0),
                 icon: "clock.fill"
             )
 
             StatCard(
                 title: "Avg. Alertness",
-                value: "87%",
+                value: String(format: "%.0f%%", driver?.averageAlertness ?? 0),
                 icon: "bolt.fill"
             )
         }
@@ -140,10 +150,10 @@ struct ProfileView: View {
             SectionHeader(title: "Personal Information")
 
             VStack(spacing: 12) {
-                ProfileInfoRow(icon: "envelope.fill", label: "Email", value: "driver@trucking.com")
-                ProfileInfoRow(icon: "phone.fill", label: "Phone", value: "+1 (555) 123-4567")
-                ProfileInfoRow(icon: "building.2.fill", label: "Company", value: "Swift Transport")
-                ProfileInfoRow(icon: "number", label: "Driver ID", value: "DRV-2024-1247")
+                ProfileInfoRow(icon: "envelope.fill", label: "Email", value: driver?.email ?? "N/A")
+                ProfileInfoRow(icon: "phone.fill", label: "Phone", value: driver?.phone ?? "N/A")
+                ProfileInfoRow(icon: "building.2.fill", label: "Company", value: driver?.company ?? "N/A")
+                ProfileInfoRow(icon: "number", label: "Driver ID", value: driver?.driverId ?? "N/A")
             }
             .padding(AppTheme.Spacing.md)
             .background(.ultraThinMaterial)
@@ -164,10 +174,30 @@ struct ProfileView: View {
             SectionHeader(title: "Quick Actions")
 
             VStack(spacing: 12) {
-                QuickActionButton(icon: "pencil", title: "Edit Profile", subtitle: "Update your information")
-                QuickActionButton(icon: "chart.bar.fill", title: "View Reports", subtitle: "See detailed analytics")
-                QuickActionButton(icon: "bell.fill", title: "Notifications", subtitle: "Manage alerts and reminders")
-                QuickActionButton(icon: "questionmark.circle.fill", title: "Help & Support", subtitle: "Get assistance")
+                QuickActionButton(
+                    icon: "pencil",
+                    title: "Edit Profile",
+                    subtitle: "Update your information",
+                    action: { showEditProfile = true }
+                )
+                QuickActionButton(
+                    icon: "chart.bar.fill",
+                    title: "View Reports",
+                    subtitle: "See detailed analytics",
+                    action: { showReports = true }
+                )
+                QuickActionButton(
+                    icon: "bell.fill",
+                    title: "Notifications",
+                    subtitle: "Manage alerts and reminders",
+                    action: { showNotifications = true }
+                )
+                QuickActionButton(
+                    icon: "questionmark.circle.fill",
+                    title: "Help & Support",
+                    subtitle: "Get assistance",
+                    action: { showHelp = true }
+                )
             }
             .padding(AppTheme.Spacing.md)
             .background(.ultraThinMaterial)
@@ -264,11 +294,10 @@ struct QuickActionButton: View {
     let icon: String
     let title: String
     let subtitle: String
+    let action: () -> Void
 
     var body: some View {
-        Button(action: {
-            // Handle action
-        }) {
+        Button(action: action) {
             HStack(spacing: 12) {
                 ZStack {
                     Circle()

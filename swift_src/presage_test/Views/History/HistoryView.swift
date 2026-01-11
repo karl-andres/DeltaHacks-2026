@@ -10,6 +10,43 @@ import SwiftUI
 struct HistoryView: View {
     @EnvironmentObject var wellnessData: WellnessDataService
 
+    @State private var showMetricDetail = false
+    @State private var selectedMetric: MetricType?
+
+    enum MetricType {
+        case heartRate
+        case hrv
+        case respiration
+        case alertness
+
+        var title: String {
+            switch self {
+            case .heartRate: return "Heart Rate"
+            case .hrv: return "HRV"
+            case .respiration: return "Respiration Rate"
+            case .alertness: return "Alertness"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .heartRate: return "heart.fill"
+            case .hrv: return "waveform.path.ecg"
+            case .respiration: return "wind"
+            case .alertness: return "bolt.fill"
+            }
+        }
+
+        var color: Color {
+            switch self {
+            case .heartRate: return AppTheme.Colors.roseAccent
+            case .hrv: return AppTheme.Colors.purpleAccent
+            case .respiration: return AppTheme.Colors.skyAccent
+            case .alertness: return AppTheme.Colors.primaryBlue
+            }
+        }
+    }
+
     var body: some View {
         ZStack {
             // Background
@@ -33,6 +70,11 @@ struct HistoryView: View {
                     // Bottom spacing for tab bar
                     Color.clear.frame(height: 100)
                 }
+            }
+        }
+        .sheet(isPresented: $showMetricDetail) {
+            if let metric = selectedMetric {
+                MetricDetailView(metric: metric)
             }
         }
     }
@@ -124,7 +166,11 @@ struct HistoryView: View {
                 average: "72",
                 unit: "BPM",
                 trend: "+2%",
-                trendUp: true
+                trendUp: true,
+                action: {
+                    selectedMetric = .heartRate
+                    showMetricDetail = true
+                }
             )
 
             HistoryMetricCard(
@@ -134,7 +180,11 @@ struct HistoryView: View {
                 average: "98",
                 unit: "ms",
                 trend: "+5%",
-                trendUp: true
+                trendUp: true,
+                action: {
+                    selectedMetric = .hrv
+                    showMetricDetail = true
+                }
             )
 
             HistoryMetricCard(
@@ -144,7 +194,11 @@ struct HistoryView: View {
                 average: "14",
                 unit: "brpm",
                 trend: "0%",
-                trendUp: true
+                trendUp: true,
+                action: {
+                    selectedMetric = .respiration
+                    showMetricDetail = true
+                }
             )
 
             HistoryMetricCard(
@@ -154,7 +208,11 @@ struct HistoryView: View {
                 average: "85",
                 unit: "%",
                 trend: "-3%",
-                trendUp: false
+                trendUp: false,
+                action: {
+                    selectedMetric = .alertness
+                    showMetricDetail = true
+                }
             )
         }
         .padding(.horizontal, AppTheme.Spacing.md)
@@ -170,11 +228,10 @@ struct HistoryMetricCard: View {
     let unit: String
     let trend: String
     let trendUp: Bool
+    let action: () -> Void
 
     var body: some View {
-        Button(action: {
-            // Navigate to detailed metric view
-        }) {
+        Button(action: action) {
             HStack(spacing: 16) {
                 // Icon
                 ZStack {

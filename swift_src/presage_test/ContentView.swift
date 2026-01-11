@@ -6,6 +6,7 @@ struct ContentView: View {
     @StateObject private var biometricsVM = BiometricsViewModel()
     @StateObject private var appState = AppStateManager()
     @StateObject private var wellnessData = WellnessDataService()
+    @StateObject private var authManager = AuthenticationManager()
 
     // Tab selection
     @State private var selectedTab: Tab = .home
@@ -25,6 +26,21 @@ struct ContentView: View {
     }
 
     var body: some View {
+        Group {
+            if authManager.isAuthenticated {
+                authenticatedView
+            } else {
+                LoginView()
+                    .environmentObject(authManager)
+            }
+        }
+        .onAppear {
+            authManager.checkExistingSession()
+        }
+    }
+
+    // MARK: - Authenticated View
+    private var authenticatedView: some View {
         ZStack {
             // Main navigation
             mainContent
@@ -69,8 +85,10 @@ struct ContentView: View {
         case .profile:
             ProfileView()
                 .environmentObject(biometricsVM)
+                .environmentObject(authManager)
         case .settings:
             SettingsView()
+                .environmentObject(authManager)
         }
     }
 

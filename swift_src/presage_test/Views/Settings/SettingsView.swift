@@ -8,10 +8,13 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @EnvironmentObject var authManager: AuthenticationManager
+
     @State private var notificationsEnabled = true
     @State private var alertnessAlertsEnabled = true
     @State private var biometricSyncEnabled = true
     @State private var darkModeEnabled = true
+    @State private var showSignOutAlert = false
 
     var body: some View {
         ZStack {
@@ -46,6 +49,14 @@ struct SettingsView: View {
                     Color.clear.frame(height: 100)
                 }
             }
+        }
+        .alert("Sign Out", isPresented: $showSignOutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Sign Out", role: .destructive) {
+                authManager.logout()
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
         }
     }
 
@@ -230,7 +241,8 @@ struct SettingsView: View {
                 SettingsButton(
                     icon: "arrow.right.square.fill",
                     title: "Sign Out",
-                    color: AppTheme.Colors.warningYellow
+                    color: AppTheme.Colors.warningYellow,
+                    action: { showSignOutAlert = true }
                 )
             }
             .background(.ultraThinMaterial)
@@ -390,11 +402,10 @@ struct SettingsButton: View {
     let icon: String
     let title: String
     let color: Color
+    let action: () -> Void
 
     var body: some View {
-        Button(action: {
-            // Handle action
-        }) {
+        Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 18))
