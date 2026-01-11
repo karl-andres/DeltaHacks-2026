@@ -2,31 +2,63 @@
  * API Types
  * 
  * Types derived from backend API responses.
- * TODO: Adjust field names here if backend response structure changes.
+ * Only includes fields that are actually returned by the API.
  */
 
 // ============================================
 // Home Dashboard Response (/home)
+// Fleet-level strategic overview - no individual biometrics
 // ============================================
 
 export interface HomeResponse {
-    /** Average Integrated Vital Score across fleet */
-    avgFleetReadiness: number;
-    /** Count of drivers with critical alerts (NAI < 8.0) */
+    // Fleet counts
+    totalDrivers: number;
+    totalScans: number;
+
+    // Status distribution
+    fitDrivers: number;
+    unfitDrivers: number;
+    passScans: number;
+    failScans: number;
+
+    // Alerts
     criticalAlertCount: number;
-    /** Whether cardio-respiratory coupling is healthy (CRC < 20) */
-    isSystemSynced: boolean;
-    /** Fleet pulse delta from 70 bpm baseline */
-    fleetStressDelta: number;
-    /** Raw aggregate values */
-    raw_aggregates: {
-        avg_pulse: number;
-        avg_crc: number;
-    };
+
+    // Fleet health (percentage of fit drivers)
+    fleetHealthPercent: number;
+
+    // Drivers requiring attention (unfit drivers, max 5)
+    driversRequiringAttention: AttentionDriver[];
+}
+
+export interface AttentionDriver {
+    fullname: string;
+    latestStatus: string;
+    avgRiskScore: number;
+    lastScanTime: string | null;
 }
 
 // ============================================
-// Scan Types (/drivers/{fullName})
+// Driver List Response (/drivers)
+// ============================================
+
+export interface DriverSummary {
+    fullname: string;
+    driver_id: string;
+    scanCount: number;
+    averageRiskScore: number;
+    averageIVS: number;
+    status: 'FIT' | 'UNFIT';
+    latestScan: {
+        id: number;
+        timestamp: string | null;
+        status: string;
+        risk_score: number;
+    } | null;
+}
+
+// ============================================
+// Individual Driver Scans (/drivers/{fullName})
 // ============================================
 
 export interface Scan {
@@ -54,26 +86,7 @@ export interface Scan {
 export type DriverScans = Scan[];
 
 // ============================================
-// Driver Summary (/drivers)
-// ============================================
-
-export interface DriverSummary {
-    fullname: string;
-    driver_id: string;
-    scanCount: number;
-    averageRiskScore: number;
-    averageIVS: number;
-    status: 'FIT' | 'UNFIT';
-    latestScan: {
-        id: number;
-        timestamp: string | null;
-        status: string;
-        risk_score: number;
-    } | null;
-}
-
-// ============================================
-// Computed Stats (client-side)
+// Computed Stats (client-side from scans)
 // ============================================
 
 export interface VitalStats {

@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import type { HomeResponse, DriverScans, DriverSummary, VitalStats } from '@/types';
+import type { HomeResponse, DriverScans, DriverSummary, VitalStats, Scan } from '@/types';
 
 // ============================================
 // Query Keys
@@ -54,10 +54,12 @@ export function useDriverData(fullName: string) {
 
 // ============================================
 // Data Transformation Utilities
+// All calculations are derived from actual API scan data
 // ============================================
 
 /**
  * Compute aggregate stats from driver scans
+ * Each field computed here exists in the Scan object from the API
  */
 export function computeDriverStats(scans: DriverScans | undefined): VitalStats | null {
     if (!scans || scans.length === 0) return null;
@@ -88,13 +90,25 @@ export function computeDriverStats(scans: DriverScans | undefined): VitalStats |
     };
 }
 
+// Type for driver summary built from scans (different from API DriverSummary)
+export interface ComputedDriverSummary {
+    fullname: string;
+    driver_id: string;
+    latestScan: Scan;
+    scanCount: number;
+    averageRiskScore: number;
+    averageIVS: number;
+    status: 'FIT' | 'UNFIT';
+}
+
 /**
- * Compute driver summary from scans
+ * Compute driver summary from individual scans
+ * This is used on the driver detail page
  */
-export function computeDriverSummary(scans: DriverScans | undefined): DriverSummary | null {
+export function computeDriverSummary(scans: DriverScans | undefined): ComputedDriverSummary | null {
     if (!scans || scans.length === 0) return null;
 
-    const latestScan = scans[0]; // Scans ordered by timestamp desc
+    const latestScan = scans[0]; // Scans ordered by timestamp desc from API
     const avgRisk = scans.reduce((sum, s) => sum + (s.risk_score || 0), 0) / scans.length;
     const avgIVS = scans.reduce((sum, s) => sum + (s.integrated_vital_score || 0), 0) / scans.length;
 

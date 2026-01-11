@@ -5,32 +5,28 @@ import {
     Activity,
     ChevronLeft,
     ClipboardList,
-    Heart,
-    LineChart,
     RefreshCw,
-    Wind,
-    Zap,
+    CheckCircle2,
+    AlertTriangle,
+    XCircle,
 } from 'lucide-react';
 import { PageLoader } from '@/components/ui/PageLoader';
 import { DriverNotFound, ErrorDisplay } from '@/components/ui/EmptyState';
 import { ChartCard } from '@/components/ui/ChartCard';
-import { StatCard } from '@/components/ui/StatCard';
 import { Tabs } from '@/components/ui/Tabs';
 import { Avatar } from '@/components/ui/Avatar';
 import { StatusBadge, RiskBadge } from '@/components/ui/Badge';
 import { ProgressRing } from '@/components/ui/ProgressRing';
 import { ScanHistoryTable } from '@/components/drivers/ScanHistoryTable';
-import { VitalsTrendChart } from '@/components/charts/VitalsTrendChart';
-import { RiskScoreChart } from '@/components/charts/RiskScoreChart';
-import { MetricsChart } from '@/components/charts/MetricsChart';
+import { VitalsChart } from '@/components/charts/VitalsChart';
 import { useDriverData, computeDriverSummary, computeDriverStats } from '@/hooks/useData';
 import { getRiskTier } from '@/types';
 import { formatNumber, getRelativeTime } from '@/lib/utils';
 
+// Only 2 tabs: Overview (all metrics + charts) and History (scan records)
 const tabConfig = [
     { id: 'overview', label: 'Overview', icon: <Activity className="h-4 w-4" /> },
-    { id: 'history', label: 'Scans', icon: <ClipboardList className="h-4 w-4" /> },
-    { id: 'metrics', label: 'Metrics', icon: <LineChart className="h-4 w-4" /> },
+    { id: 'history', label: 'Scan History', icon: <ClipboardList className="h-4 w-4" /> },
 ];
 
 // Animation variants
@@ -69,7 +65,7 @@ export default function DriverPage() {
     }
 
     const riskTier = getRiskTier(driverSummary.averageRiskScore);
-    const safetyScore = Math.max(0, 100 - driverSummary.averageRiskScore * 10);
+    const safetyScore = Math.max(0, Math.round(100 - driverSummary.averageRiskScore * 10));
 
     return (
         <motion.div
@@ -85,17 +81,17 @@ export default function DriverPage() {
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors group"
                 >
                     <ChevronLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-                    Back to Dashboard
+                    Back to Fleet Overview
                 </Link>
             </motion.div>
 
-            {/* Driver Header Card */}
+            {/* Driver Header */}
             <motion.div
                 variants={itemVariants}
                 className="rounded-xl border border-border bg-gradient-to-br from-card via-card to-card/80 p-6"
             >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-6">
-                    {/* Left: Driver Info */}
+                    {/* Driver Info */}
                     <div className="flex items-start gap-4 flex-1">
                         <Avatar name={driverSummary.fullname} size="lg" />
                         <div className="min-w-0">
@@ -118,8 +114,8 @@ export default function DriverPage() {
                         </div>
                     </div>
 
-                    {/* Right: Score & Stats */}
-                    <div className="flex items-center gap-6 lg:gap-8">
+                    {/* Safety Score */}
+                    <div className="flex items-center gap-6">
                         <ProgressRing
                             value={safetyScore}
                             max={100}
@@ -130,16 +126,16 @@ export default function DriverPage() {
                         <div className="hidden sm:block h-16 w-px bg-border" />
                         <div className="hidden sm:grid grid-cols-2 gap-4 text-center">
                             <div>
-                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg IVS</p>
-                                <p className="text-lg font-semibold text-foreground mt-0.5">
-                                    {formatNumber(driverSummary.averageIVS)}
-                                </p>
-                            </div>
-                            <div>
                                 <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg Risk</p>
                                 <p className={`text-lg font-semibold mt-0.5 ${driverSummary.averageRiskScore >= 5 ? 'text-red-500' : 'text-emerald-500'
                                     }`}>
                                     {formatNumber(driverSummary.averageRiskScore)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground uppercase tracking-wide">Avg IVS</p>
+                                <p className="text-lg font-semibold text-foreground mt-0.5">
+                                    {formatNumber(driverSummary.averageIVS)}
                                 </p>
                             </div>
                         </div>
@@ -174,13 +170,10 @@ export default function DriverPage() {
                     transition={{ duration: 0.25 }}
                 >
                     {activeTab === 'overview' && (
-                        <OverviewTab scans={scans} stats={driverStats} />
+                        <OverviewTab scans={scans} stats={driverStats} summary={driverSummary} />
                     )}
                     {activeTab === 'history' && (
                         <HistoryTab scans={scans} />
-                    )}
-                    {activeTab === 'metrics' && (
-                        <MetricsTab scans={scans} stats={driverStats} />
                     )}
                 </motion.div>
             </AnimatePresence>
@@ -189,169 +182,176 @@ export default function DriverPage() {
 }
 
 // ============================================
-// Tab Components - Only display real data
+// OVERVIEW TAB - Status + All Averages + Charts
 // ============================================
 
 function OverviewTab({
     scans,
-    stats
+    stats,
+    summary,
 }: {
     scans: NonNullable<ReturnType<typeof useDriverData>['data']>;
     stats: ReturnType<typeof computeDriverStats>;
+    summary: NonNullable<ReturnType<typeof computeDriverSummary>>;
 }) {
     if (!stats) {
         return (
             <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
-                Insufficient data to display statistics.
+                Insufficient data to display overview.
             </div>
         );
     }
 
+    // Derive overall assessment from averages
+    const isHealthy = summary.averageRiskScore < 5;
+    const alertnessOk = stats.avgNAI >= 8;
+    const crcOk = stats.avgCRC < 20;
+    const issueCount = [!isHealthy, !alertnessOk, !crcOk].filter(Boolean).length;
+    const overallStatus = issueCount === 0 ? 'healthy' : issueCount === 1 ? 'warning' : 'critical';
+
     return (
         <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <StatCard
-                    title="Avg Pulse"
-                    value={formatNumber(stats.avgPulse)}
-                    unit="bpm"
-                    icon={Heart}
-                    variant={stats.avgPulse < 50 || stats.avgPulse > 100 ? 'warning' : 'default'}
-                />
-                <StatCard
-                    title="Avg Breathing"
-                    value={formatNumber(stats.avgBreathing)}
-                    unit="rpm"
-                    icon={Wind}
-                    variant={stats.avgBreathing < 8 || stats.avgBreathing > 25 ? 'warning' : 'default'}
-                />
-                <StatCard
-                    title="Vital Score"
-                    value={formatNumber(stats.avgIVS)}
-                    subtitle="Integrated (IVS)"
-                    icon={Activity}
-                    variant="success"
-                />
-                <StatCard
-                    title="Alertness"
-                    value={formatNumber(stats.avgNAI)}
-                    subtitle="Nonlinear (NAI)"
-                    icon={Zap}
-                    variant={stats.avgNAI < 8 ? 'warning' : 'success'}
-                />
+            {/* Status Assessment */}
+            <StatusCard status={overallStatus} />
+
+            {/* All Average Metrics - Consistent treatment */}
+            <div className="rounded-xl border border-border bg-card p-6">
+                <h3 className="text-sm font-semibold text-foreground mb-4">
+                    Average Metrics ({scans.length} scan{scans.length !== 1 ? 's' : ''})
+                </h3>
+
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Measured vitals */}
+                    <MetricItem
+                        label="Avg Pulse Rate"
+                        value={formatNumber(stats.avgPulse)}
+                        unit="bpm"
+                        status={stats.avgPulse >= 50 && stats.avgPulse <= 100 ? 'normal' : 'warning'}
+                    />
+                    <MetricItem
+                        label="Avg Breathing Rate"
+                        value={formatNumber(stats.avgBreathing)}
+                        unit="rpm"
+                        status={stats.avgBreathing >= 8 && stats.avgBreathing <= 25 ? 'normal' : 'warning'}
+                    />
+
+                    {/* Computed metrics */}
+                    <MetricItem
+                        label="Avg CRC"
+                        value={formatNumber(stats.avgCRC)}
+                        status={stats.avgCRC < 20 ? 'normal' : 'warning'}
+                    />
+                    <MetricItem
+                        label="Avg NAI"
+                        value={formatNumber(stats.avgNAI)}
+                        status={stats.avgNAI >= 8 ? 'normal' : 'warning'}
+                    />
+                    <MetricItem
+                        label="Avg PRQ"
+                        value={formatNumber(stats.avgPRQ, 2)}
+                        status={stats.avgPRQ >= 3.2 && stats.avgPRQ <= 5.5 ? 'normal' : 'warning'}
+                    />
+                    <MetricItem
+                        label="Avg IVS"
+                        value={formatNumber(stats.avgIVS)}
+                        status={stats.avgIVS >= 6.5 ? 'normal' : 'warning'}
+                    />
+                    <MetricItem
+                        label="Avg Risk Score"
+                        value={formatNumber(stats.avgRiskScore)}
+                        status={stats.avgRiskScore < 5 ? 'normal' : 'warning'}
+                    />
+                </div>
             </div>
 
             {/* Charts */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ChartCard title="Vital Signs" subtitle="Pulse and breathing over time">
-                    <VitalsTrendChart scans={scans} height={260} />
+                <ChartCard title="Vitals Over Time" subtitle="Pulse Rate and CRC from each scan">
+                    <VitalsChart scans={scans} metrics={['pulse', 'crc']} height={280} />
                 </ChartCard>
-                <ChartCard title="Risk Score" subtitle="Safety assessment trend">
-                    <RiskScoreChart scans={scans} height={260} />
+                <ChartCard title="Performance Metrics" subtitle="NAI, IVS, and Risk Score trends">
+                    <VitalsChart scans={scans} metrics={['nai', 'ivs', 'risk']} height={280} />
                 </ChartCard>
             </div>
-
-            {/* Recent Scans */}
-            <ChartCard title="Recent Scans" subtitle={`Latest ${Math.min(5, scans.length)} of ${scans.length}`}>
-                <ScanHistoryTable scans={scans.slice(0, 5)} />
-            </ChartCard>
         </div>
     );
 }
+
+function StatusCard({ status }: { status: 'healthy' | 'warning' | 'critical' }) {
+    const config = {
+        healthy: {
+            icon: CheckCircle2,
+            title: 'Driver is Fit',
+            description: 'All average indicators are within normal ranges.',
+            className: 'border-emerald-500/30 bg-emerald-500/5',
+            iconColor: 'text-emerald-500',
+        },
+        warning: {
+            icon: AlertTriangle,
+            title: 'Needs Attention',
+            description: 'One or more indicators are slightly outside normal ranges.',
+            className: 'border-amber-500/30 bg-amber-500/5',
+            iconColor: 'text-amber-500',
+        },
+        critical: {
+            icon: XCircle,
+            title: 'Critical Status',
+            description: 'Multiple indicators are concerning. Review recommended.',
+            className: 'border-red-500/30 bg-red-500/5',
+            iconColor: 'text-red-500',
+        },
+    };
+
+    const { icon: Icon, title, description, className, iconColor } = config[status];
+
+    return (
+        <div className={`rounded-xl border p-5 ${className}`}>
+            <div className="flex items-center gap-3">
+                <Icon className={`h-6 w-6 ${iconColor}`} />
+                <div>
+                    <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+                    <p className="text-sm text-muted-foreground">{description}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function MetricItem({
+    label,
+    value,
+    unit,
+    status,
+}: {
+    label: string;
+    value: string;
+    unit?: string;
+    status: 'normal' | 'warning';
+}) {
+    return (
+        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30">
+            <div className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${status === 'normal' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                <span className="text-sm text-muted-foreground">{label}</span>
+            </div>
+            <span className="text-sm font-semibold text-foreground">
+                {value}{unit && <span className="text-muted-foreground font-normal ml-1">{unit}</span>}
+            </span>
+        </div>
+    );
+}
+
+// ============================================
+// HISTORY TAB - Scan records
+// ============================================
 
 function HistoryTab({ scans }: { scans: NonNullable<ReturnType<typeof useDriverData>['data']> }) {
     return (
         <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-                {scans.length} scan{scans.length !== 1 ? 's' : ''} recorded
+                Showing all {scans.length} scan{scans.length !== 1 ? 's' : ''} for this driver
             </p>
             <ScanHistoryTable scans={scans} />
-        </div>
-    );
-}
-
-function MetricsTab({
-    scans,
-    stats
-}: {
-    scans: NonNullable<ReturnType<typeof useDriverData>['data']>;
-    stats: ReturnType<typeof computeDriverStats>;
-}) {
-    if (!stats) {
-        return (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center text-muted-foreground">
-                Insufficient data for advanced metrics.
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6">
-            {/* Derived Metrics */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <MetricCard
-                    label="PRQ"
-                    value={formatNumber(stats.avgPRQ, 2)}
-                    description="Pulse-Respiration Quotient"
-                    status={stats.avgPRQ >= 3.2 && stats.avgPRQ <= 5.5 ? 'normal' : 'warning'}
-                    range="3.2 – 5.5"
-                />
-                <MetricCard
-                    label="IVS"
-                    value={formatNumber(stats.avgIVS)}
-                    description="Integrated Vital Score"
-                    status="normal"
-                    range="> 6.5"
-                />
-                <MetricCard
-                    label="CRC"
-                    value={formatNumber(stats.avgCRC)}
-                    description="Cardio-Respiratory Coupler"
-                    status={stats.avgCRC <= 20 ? 'normal' : 'warning'}
-                    range="< 20"
-                />
-                <MetricCard
-                    label="NAI"
-                    value={formatNumber(stats.avgNAI)}
-                    description="Nonlinear Alertness Index"
-                    status={stats.avgNAI >= 8 ? 'normal' : 'warning'}
-                    range="> 8.0"
-                />
-            </div>
-
-            {/* Metrics Chart */}
-            <ChartCard title="Derived Metrics Trend" subtitle="PRQ, IVS, NAI over time">
-                <MetricsChart scans={scans} height={320} />
-            </ChartCard>
-        </div>
-    );
-}
-
-function MetricCard({
-    label,
-    value,
-    description,
-    status,
-    range
-}: {
-    label: string;
-    value: string;
-    description: string;
-    status: 'normal' | 'warning';
-    range: string;
-}) {
-    return (
-        <div className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-start justify-between">
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {label}
-                </span>
-                <span className={`h-2 w-2 rounded-full ${status === 'normal' ? 'bg-emerald-500' : 'bg-amber-500'
-                    }`} />
-            </div>
-            <p className="text-2xl font-bold text-foreground mt-2">{value}</p>
-            <p className="text-xs text-muted-foreground mt-1">{description}</p>
-            <p className="text-xs text-muted-foreground/70 mt-0.5">Normal: {range}</p>
         </div>
     );
 }
