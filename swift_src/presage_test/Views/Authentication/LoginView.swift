@@ -117,18 +117,18 @@ struct LoginView: View {
         VStack(spacing: 16) {
             // Email field
             VStack(alignment: .leading, spacing: 8) {
-                Text("Email")
+                Text("Full Name")
                     .font(AppTheme.Typography.callout)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
 
                 HStack(spacing: 12) {
-                    Image(systemName: "envelope.fill")
+                    Image(systemName: "person.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(AppTheme.Colors.primaryBlue)
                         .frame(width: 24)
 
-                    TextField("driver@trucking.com", text: $email)
+                    TextField("John Doe", text: $email)
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Colors.textPrimary)
                         .textInputAutocapitalization(.never)
@@ -155,7 +155,7 @@ struct LoginView: View {
 
             // Password field
             VStack(alignment: .leading, spacing: 8) {
-                Text("Password")
+                Text("Driver ID")
                     .font(AppTheme.Typography.callout)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
@@ -167,7 +167,7 @@ struct LoginView: View {
                         .frame(width: 24)
 
                     if showPassword {
-                        TextField("Enter your password", text: $password)
+                        TextField("Enter your DriverID", text: $password)
                             .font(AppTheme.Typography.body)
                             .foregroundStyle(AppTheme.Colors.textPrimary)
                             .focused($focusedField, equals: .password)
@@ -176,7 +176,7 @@ struct LoginView: View {
                                 performLogin()
                             }
                     } else {
-                        SecureField("Enter your password", text: $password)
+                        SecureField("Enter your DriverID", text: $password)
                             .font(AppTheme.Typography.body)
                             .foregroundStyle(AppTheme.Colors.textPrimary)
                             .focused($focusedField, equals: .password)
