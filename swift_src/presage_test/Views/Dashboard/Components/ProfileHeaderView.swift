@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ProfileHeaderView: View {
     @EnvironmentObject var appState: AppStateManager
+    @StateObject var manager = VitalsManager.shared
 
     var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
@@ -85,6 +86,7 @@ struct ProfileHeaderView: View {
             // Start Duty button
             Button(action: {
                 appState.startDuty()
+                manager.startMonitoring()
             }) {
                 Text("Start Duty")
                     .font(AppTheme.Typography.callout)

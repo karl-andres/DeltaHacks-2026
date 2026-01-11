@@ -7,9 +7,15 @@
 
 import SwiftUI
 
+import SwiftUI
+
 struct ScanningCircleView: View {
     let progress: Double
     let faceDetected: Bool
+    @StateObject var manager = VitalsManager.shared
+    
+    // 1. Initialize the camera handler
+    @StateObject private var cameraModel = FrameHandler()
 
     var body: some View {
         ZStack {
@@ -35,34 +41,29 @@ struct ScanningCircleView: View {
                 .shadow(color: AppTheme.Colors.primaryBlue.opacity(0.6), radius: 15)
                 .animation(.linear(duration: 0.3), value: progress)
 
-            // Inner glass circle
+            // Inner circle area
             ZStack {
+                // 1. Background layer (the "glass" effect should be BEHIND the camera)
                 Circle()
                     .fill(.ultraThinMaterial)
-                    .overlay(
-                        Circle()
-                            .fill(
-                                LinearGradient(
-                                    colors: [
-                                        AppTheme.Colors.primaryBlue.opacity(0.1),
-                                        Color.clear
-                                    ],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                )
-                            )
-                    )
                     .overlay(
                         Circle()
                             .stroke(AppTheme.Colors.glassBorder, lineWidth: 1)
                     )
 
-                // Face icon
-                Image(systemName: "faceid")
-                    .font(.system(size: 140))
-                    .foregroundStyle(Color.white.opacity(0.3))
+                // 2. Display the live camera feed ON TOP of the glass
+                // This prevents the "gray" blur from covering the video
+                if manager.isRecording {
+                    FrameView(image: cameraModel.frame)
+                        .clipShape(Circle())
+                } else {
+                    // Optional: Show a placeholder or icon when not recording
+                    Image(systemName: "faceid")
+                        .font(.system(size: 80))
+                        .foregroundStyle(AppTheme.Colors.primaryBlue.opacity(0.3))
+                }
 
-                // Scanning line animation
+                // 3. Scanning line animation (should be on the very top)
                 if progress > 0 && progress < 1 {
                     Rectangle()
                         .fill(AppTheme.Colors.primaryBlue.opacity(0.5))
@@ -76,7 +77,6 @@ struct ScanningCircleView: View {
             // Status indicator at bottom
             VStack {
                 Spacer()
-
                 Text("Keep head still")
                     .font(AppTheme.Typography.callout)
                     .foregroundStyle(AppTheme.Colors.textSecondary)

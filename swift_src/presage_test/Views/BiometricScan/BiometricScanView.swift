@@ -6,12 +6,28 @@
 //
 
 import SwiftUI
+import SmartSpectraSwiftSDK
 
 struct BiometricScanView: View {
     @EnvironmentObject var biometricsVM: BiometricsViewModel
     @EnvironmentObject var appState: AppStateManager
     @Environment(\.dismiss) var dismiss
+    @StateObject var manager = VitalsManager.shared
+    @ObservedObject var sdk = SmartSpectraSwiftSDK.shared
+    
+    var metrics: Presage_Physiology_MetricsBuffer? {
+        sdk.metricsBuffer
+    }
+    
+    var latestPulseRate: Float? {
+        metrics?.pulse.rate.last?.value
+    }
 
+    var latestBreathingRate: Float? {
+        metrics?.breathing.rate.last?.value
+    }
+
+    
     var body: some View {
         ZStack {
             // Background
@@ -129,8 +145,8 @@ struct BiometricScanView: View {
     // MARK: - Scanning Area
     private var scanningArea: some View {
         ScanningCircleView(
-            progress: biometricsVM.scanProgress,
-            faceDetected: biometricsVM.faceDetected
+            progress: 0.6,
+            faceDetected: true
         )
     }
 
@@ -141,7 +157,7 @@ struct BiometricScanView: View {
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.dangerRed,
                 title: "Heart Rate",
-                value: biometricsVM.currentHeartRate,
+                value: latestPulseRate,
                 unit: "BPM",
                 status: "Good",
                 showPulse: true
@@ -151,7 +167,7 @@ struct BiometricScanView: View {
                 icon: "wind",
                 iconColor: AppTheme.Colors.primaryBlue,
                 title: "Respiration",
-                value: biometricsVM.currentRespirationRate,
+                value: latestBreathingRate,
                 unit: "RR",
                 status: "Good",
                 showPulse: false
@@ -180,6 +196,7 @@ struct BiometricScanView: View {
 
             // Cancel scan button
             Button(action: {
+                manager.stopMonitoring(shouldUpload: true, driverID: "karl_001", fullName: "Karl_Andres") // hard coded id and name
                 biometricsVM.cancelScan()
                 appState.cancelScan()
                 dismiss()
