@@ -7,6 +7,16 @@ struct ContentView: View {
     @StateObject private var appState = AppStateManager()
     @StateObject private var wellnessData = WellnessDataService()
 
+    // Tab selection
+    @State private var selectedTab: Tab = .home
+
+    enum Tab {
+        case home
+        case history
+        case profile
+        case settings
+    }
+
     init() {
         // Initialize SDK with API key
         let sdk = SmartSpectraSwiftSDK.shared
@@ -19,8 +29,8 @@ struct ContentView: View {
             // Main navigation
             mainContent
 
-            // Tab bar overlay (when on dashboard)
-            if case .dashboard = appState.currentState, !appState.showScanSheet, !appState.showResultsFullScreen {
+            // Tab bar overlay (visible on all tabs except when scanning/showing results)
+            if !appState.showScanSheet, !appState.showResultsFullScreen {
                 VStack {
                     Spacer()
                     bottomTabBar
@@ -47,10 +57,21 @@ struct ContentView: View {
     // MARK: - Main Content
     @ViewBuilder
     private var mainContent: some View {
-        WellnessDashboardView()
-            .environmentObject(biometricsVM)
-            .environmentObject(appState)
-            .environmentObject(wellnessData)
+        switch selectedTab {
+        case .home:
+            WellnessDashboardView()
+                .environmentObject(biometricsVM)
+                .environmentObject(appState)
+                .environmentObject(wellnessData)
+        case .history:
+            HistoryView()
+                .environmentObject(wellnessData)
+        case .profile:
+            ProfileView()
+                .environmentObject(biometricsVM)
+        case .settings:
+            SettingsView()
+        }
     }
 
     // MARK: - Result View
@@ -74,10 +95,18 @@ struct ContentView: View {
     // MARK: - Bottom Tab Bar
     private var bottomTabBar: some View {
         HStack(spacing: 0) {
-            TabBarItem(icon: "house.fill", isActive: true)
-            TabBarItem(icon: "clock.arrow.circlepath", isActive: false)
-            TabBarItem(icon: "person.fill", isActive: false)
-            TabBarItem(icon: "gearshape.fill", isActive: false)
+            TabBarItem(icon: "house.fill", isActive: selectedTab == .home) {
+                selectedTab = .home
+            }
+            TabBarItem(icon: "clock.arrow.circlepath", isActive: selectedTab == .history) {
+                selectedTab = .history
+            }
+            TabBarItem(icon: "person.fill", isActive: selectedTab == .profile) {
+                selectedTab = .profile
+            }
+            TabBarItem(icon: "gearshape.fill", isActive: selectedTab == .settings) {
+                selectedTab = .settings
+            }
         }
         .padding(.horizontal, AppTheme.Spacing.lg)
         .padding(.vertical, AppTheme.Spacing.md)
@@ -98,9 +127,10 @@ struct ContentView: View {
 struct TabBarItem: View {
     let icon: String
     let isActive: Bool
+    let action: () -> Void
 
     var body: some View {
-        Button(action: {}) {
+        Button(action: action) {
             Image(systemName: icon)
                 .font(.system(size: 22))
                 .foregroundStyle(isActive ? AppTheme.Colors.primaryBlue : AppTheme.Colors.textTertiary)
