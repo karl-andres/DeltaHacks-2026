@@ -33,8 +33,8 @@ class DriverVitalsManager: ObservableObject {
         }
 
         do {
-            // Fetch vitals from API using driver's name
-            let allVitals = try await DriverService.shared.fetchDriverVitals(fullName: driver.name)
+            // Fetch vitals from API using driver's fullname
+            let allVitals = try await DriverService.shared.fetchDriverVitals(fullName: driver.fullname)
 
             await MainActor.run {
                 // Store all vitals in history
