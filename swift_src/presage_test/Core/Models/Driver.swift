@@ -8,7 +8,7 @@
 import Foundation
 
 // MARK: - Driver Model
-struct Driver: Identifiable, Codable {
+struct Driver: Identifiable, Codable, Equatable {
     let id: String
     var name: String
     var email: String
@@ -24,7 +24,7 @@ struct Driver: Identifiable, Codable {
     var hoursDrivern: Double
     var averageAlertness: Double
 
-    enum ShiftType: String, Codable {
+    enum ShiftType: String, Codable, Equatable {
         case day = "Day Shift"
         case night = "Night Shift"
         case swing = "Swing Shift"
@@ -56,7 +56,7 @@ struct Driver: Identifiable, Codable {
 }
 
 // MARK: - Authentication State
-enum AuthState {
+enum AuthState: Equatable {
     case unauthenticated
     case authenticating
     case authenticated(Driver)
