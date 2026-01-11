@@ -266,30 +266,7 @@ struct LoginView: View {
         )
         .padding(.bottom, 24)
     }
-
-    // MARK: - Demo Credentials Hint
-    private var demoCredentialsHint: some View {
-        VStack(spacing: 12) {
-            Text("Demo Credentials")
-                .font(AppTheme.Typography.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppTheme.Colors.textTertiary)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Email: demo@driver.com")
-                    .font(AppTheme.Typography.caption)
-                    .foregroundStyle(AppTheme.Colors.textSecondary)
-
-                Text("Password: demo")
-                    .font(AppTheme.Typography.caption)
-                    .foregroundStyle(AppTheme.Colors.textSecondary)
-            }
-            .padding(AppTheme.Spacing.sm)
-            .background(AppTheme.Colors.glassFill.opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
-        }
-        .padding(.top, 12)
-    }
+    
 
     // MARK: - Actions
     private func performLogin() {
