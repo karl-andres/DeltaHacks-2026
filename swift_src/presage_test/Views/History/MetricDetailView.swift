@@ -11,23 +11,26 @@ import Charts
 struct MetricDetailView: View {
     let metric: HistoryView.MetricType
     @Environment(\.dismiss) var dismiss
+    
+    // Store chart data to ensure consistency between chart and statistics
+    @State private var chartData: [DataPoint] = []
 
-    // Sample data for the chart
-    private var chartData: [DataPoint] {
+    private var valueRange: ClosedRange<Double> {
+        switch metric {
+        case .heartRate: return 60...90
+        case .respiration: return 12...18
+        case .riskScore: return 0...1
+        case .pulseRespirationQuotient: return 3...6
+        }
+    }
+    
+    // Generate sample data for the chart (called once on appear)
+    private func generateChartData() -> [DataPoint] {
         (0..<30).map { day in
             DataPoint(
                 day: day,
                 value: Double.random(in: valueRange)
             )
-        }
-    }
-
-    private var valueRange: ClosedRange<Double> {
-        switch metric {
-        case .heartRate: return 60...90
-        case .hrv: return 80...110
-        case .respiration: return 12...18
-        case .alertness: return 70...95
         }
     }
 
@@ -71,6 +74,13 @@ struct MetricDetailView: View {
                             .foregroundStyle(AppTheme.Colors.textTertiary)
                     }
                 }
+            }
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+        .navigationViewStyle(.stack)
+        .onAppear {
+            if chartData.isEmpty {
+                chartData = generateChartData()
             }
         }
     }
@@ -247,15 +257,41 @@ struct MetricDetailView: View {
 
     // MARK: - Helper Properties
     private var statisticValues: (average: String, highest: String, lowest: String) {
+        guard !chartData.isEmpty else {
+            // Return placeholder values if data hasn't loaded yet
+            return ("--", "--", "--")
+        }
+        
+        let values = chartData.map { $0.value }
+        let average = values.reduce(0, +) / Double(values.count)
+        let highest = values.max() ?? 0
+        let lowest = values.min() ?? 0
+        
         switch metric {
         case .heartRate:
-            return ("72 BPM", "88 BPM", "64 BPM")
-        case .hrv:
-            return ("98 ms", "108 ms", "82 ms")
+            return (
+                String(format: "%.0f BPM", average),
+                String(format: "%.0f BPM", highest),
+                String(format: "%.0f BPM", lowest)
+            )
         case .respiration:
-            return ("14 brpm", "17 brpm", "12 brpm")
-        case .alertness:
-            return ("85%", "94%", "73%")
+            return (
+                String(format: "%.1f brpm", average),
+                String(format: "%.1f brpm", highest),
+                String(format: "%.1f brpm", lowest)
+            )
+        case .riskScore:
+            return (
+                String(format: "%.2f", average),
+                String(format: "%.2f", highest),
+                String(format: "%.2f", lowest)
+            )
+        case .pulseRespirationQuotient:
+            return (
+                String(format: "%.1f ratio", average),
+                String(format: "%.1f ratio", highest),
+                String(format: "%.1f ratio", lowest)
+            )
         }
     }
 
@@ -263,12 +299,12 @@ struct MetricDetailView: View {
         switch metric {
         case .heartRate:
             return "Your heart rate has been consistently within a healthy range. The slight increase during afternoon shifts is normal and indicates good cardiovascular response to activity."
-        case .hrv:
-            return "Your HRV shows good variability, indicating strong recovery and stress management. The upward trend suggests improving cardiovascular fitness."
         case .respiration:
             return "Your breathing rate is stable and within the optimal range. This indicates good respiratory health and effective stress management during shifts."
-        case .alertness:
-            return "Your alertness levels remain high throughout most shifts. The slight dips in the evening are normal. Consider short breaks to maintain peak performance."
+        case .riskScore:
+            return "Your risk score remains low, indicating good overall health. Continue maintaining healthy habits and regular monitoring to keep your risk levels minimal."
+        case .pulseRespirationQuotient:
+            return "Your pulse-respiration quotient is within normal range, showing balanced cardiovascular and respiratory function. This metric helps assess overall physiological coordination."
         }
     }
 }

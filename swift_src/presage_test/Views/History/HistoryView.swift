@@ -9,40 +9,41 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var wellnessData: WellnessDataService
+    @ObservedObject var vitalsManager = DriverVitalsManager.shared
 
     @State private var showMetricDetail = false
     @State private var selectedMetric: MetricType?
 
     enum MetricType {
         case heartRate
-        case hrv
         case respiration
-        case alertness
+        case riskScore
+        case pulseRespirationQuotient
 
         var title: String {
             switch self {
             case .heartRate: return "Heart Rate"
-            case .hrv: return "HRV"
             case .respiration: return "Respiration Rate"
-            case .alertness: return "Alertness"
+            case .riskScore: return "Risk Score"
+            case .pulseRespirationQuotient: return "PRQ"
             }
         }
 
         var icon: String {
             switch self {
             case .heartRate: return "heart.fill"
-            case .hrv: return "waveform.path.ecg"
             case .respiration: return "wind"
-            case .alertness: return "bolt.fill"
+            case .riskScore: return "exclamationmark.triangle.fill"
+            case .pulseRespirationQuotient: return "waveform.path.ecg"
             }
         }
 
         var color: Color {
             switch self {
             case .heartRate: return AppTheme.Colors.roseAccent
-            case .hrv: return AppTheme.Colors.purpleAccent
             case .respiration: return AppTheme.Colors.skyAccent
-            case .alertness: return AppTheme.Colors.primaryBlue
+            case .riskScore: return AppTheme.Colors.warningYellow
+            case .pulseRespirationQuotient: return AppTheme.Colors.purpleAccent
             }
         }
     }
@@ -159,11 +160,15 @@ struct HistoryView: View {
     // MARK: - Metrics History List
     private var metricsHistoryList: some View {
         VStack(spacing: 16) {
+            // Calculate averages based on selected time period
+            let daysToConsider = selectedPeriod == .day ? 1 : selectedPeriod == .week ? 7 : selectedPeriod == .month ? 30 : 365
+            let averages = vitalsManager.getAverageMetrics(for: daysToConsider)
+
             HistoryMetricCard(
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.roseAccent,
                 title: "Heart Rate",
-                average: "72",
+                average: vitalsManager.hasVitals ? String(format: "%.0f", averages.pulseRate) : "72",
                 unit: "BPM",
                 trend: "+2%",
                 trendUp: true,
@@ -174,24 +179,10 @@ struct HistoryView: View {
             )
 
             HistoryMetricCard(
-                icon: "waveform.path.ecg",
-                iconColor: AppTheme.Colors.purpleAccent,
-                title: "HRV",
-                average: "98",
-                unit: "ms",
-                trend: "+5%",
-                trendUp: true,
-                action: {
-                    selectedMetric = .hrv
-                    showMetricDetail = true
-                }
-            )
-
-            HistoryMetricCard(
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
                 title: "Respiration Rate",
-                average: "14",
+                average: vitalsManager.hasVitals ? String(format: "%.1f", averages.breathingRate) : "14",
                 unit: "brpm",
                 trend: "0%",
                 trendUp: true,
@@ -202,15 +193,29 @@ struct HistoryView: View {
             )
 
             HistoryMetricCard(
-                icon: "bolt.fill",
-                iconColor: AppTheme.Colors.primaryBlue,
-                title: "Alertness",
-                average: "85",
-                unit: "%",
-                trend: "-3%",
+                icon: "exclamationmark.triangle.fill",
+                iconColor: AppTheme.Colors.warningYellow,
+                title: "Risk Score",
+                average: vitalsManager.hasVitals ? String(format: "%.2f", averages.riskScore) : "0.00",
+                unit: "",
+                trend: "-5%",
                 trendUp: false,
                 action: {
-                    selectedMetric = .alertness
+                    selectedMetric = .riskScore
+                    showMetricDetail = true
+                }
+            )
+
+            HistoryMetricCard(
+                icon: "waveform.path.ecg",
+                iconColor: AppTheme.Colors.purpleAccent,
+                title: "PRQ",
+                average: vitalsManager.hasVitals ? String(format: "%.1f", averages.pulseRespirationQuotient) : "0.0",
+                unit: "ratio",
+                trend: "+1%",
+                trendUp: true,
+                action: {
+                    selectedMetric = .pulseRespirationQuotient
                     showMetricDetail = true
                 }
             )

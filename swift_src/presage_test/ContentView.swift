@@ -158,8 +158,9 @@ struct TabBarItem: View {
     }
 }
 
-// MARK: - Preview
+// so i can see on xcode
 #Preview {
+    // Pass in a string so you can see how the text fits in the UI
     ContentView()
 }
 

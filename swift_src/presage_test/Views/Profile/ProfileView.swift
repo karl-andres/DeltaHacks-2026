@@ -98,20 +98,14 @@ struct ProfileView: View {
 
             // Name and role
             VStack(spacing: 4) {
-                Text(driver?.name ?? "Driver")
+                Text(driver?.fullname ?? "Driver")
                     .font(AppTheme.Typography.title)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.Colors.textPrimary)
 
-                HStack(spacing: 6) {
-                    Image(systemName: driver?.shiftType.icon ?? "sun.max.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(AppTheme.Colors.primaryBlue)
-
-                    Text(driver?.shiftType.rawValue ?? "Day Shift")
-                        .font(AppTheme.Typography.callout)
-                        .foregroundStyle(AppTheme.Colors.textSecondary)
-                }
+                Text("Professional Driver")
+                    .font(AppTheme.Typography.callout)
+                    .foregroundStyle(AppTheme.Colors.textSecondary)
             }
         }
         .frame(maxWidth: .infinity)
@@ -121,27 +115,7 @@ struct ProfileView: View {
 
     // MARK: - Stats Section
     private var statsSection: some View {
-        HStack(spacing: 12) {
-            StatCard(
-                title: "Total Shifts",
-                value: "\(driver?.totalShifts ?? 0)",
-                icon: "calendar"
-            )
-
-            StatCard(
-                title: "Hours Driven",
-                value: String(format: "%.0f", driver?.hoursDrivern ?? 0),
-                icon: "clock.fill"
-            )
-
-            StatCard(
-                title: "Avg. Alertness",
-                value: String(format: "%.0f%%", driver?.averageAlertness ?? 0),
-                icon: "bolt.fill"
-            )
-        }
-        .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.bottom, AppTheme.Spacing.lg)
+        EmptyView()
     }
 
     // MARK: - Profile Info Section
@@ -150,10 +124,8 @@ struct ProfileView: View {
             SectionHeader(title: "Personal Information")
 
             VStack(spacing: 12) {
-                ProfileInfoRow(icon: "envelope.fill", label: "Email", value: driver?.email ?? "N/A")
-                ProfileInfoRow(icon: "phone.fill", label: "Phone", value: driver?.phone ?? "N/A")
-                ProfileInfoRow(icon: "building.2.fill", label: "Company", value: driver?.company ?? "N/A")
                 ProfileInfoRow(icon: "number", label: "Driver ID", value: driver?.driverId ?? "N/A")
+                ProfileInfoRow(icon: "person.text.rectangle", label: "Full Name", value: driver?.fullname ?? "N/A")
             }
             .padding(AppTheme.Spacing.md)
             .background(.ultraThinMaterial)
