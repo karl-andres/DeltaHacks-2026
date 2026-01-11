@@ -12,6 +12,7 @@ import SmartSpectraSwiftSDK
 class BiometricsViewModel: ObservableObject {
     // MARK: - SDK Integration
     @Published var sdk = SmartSpectraSwiftSDK.shared
+    @Published var vitalsProcessor = SmartSpectraVitalsProcessor.shared
 
     // MARK: - Real-time Metrics
     @Published var currentHeartRate: Int = 0
@@ -36,7 +37,7 @@ class BiometricsViewModel: ObservableObject {
     @Published var scanProgress: Double = 0.0
 
     // MARK: - Mock Data Mode
-    var useMockData: Bool = true  // Set to false when SDK is properly configured
+    var useMockData: Bool = false  // Set to false to use real SDK
 
     private var cancellables = Set<AnyCancellable>()
     private var scanTimer: Timer?
@@ -78,24 +79,24 @@ class BiometricsViewModel: ObservableObject {
         guard let buffer = buffer as? Any else { return }
 
         // Extract pulse rate
-        // if let pulseRate = buffer.pulse?.rate?.last {
-        //     currentHeartRate = Int(pulseRate.value)
-        //     heartRateConfidence = pulseRate.confidence
-        //     heartRateHistory.append(pulseRate.value)
-        //     if heartRateHistory.count > 60 {
-        //         heartRateHistory.removeFirst()
-        //     }
-        // }
+         if let pulseRate = buffer.pulse?.rate?.last {
+             currentHeartRate = Int(pulseRate.value)
+             heartRateConfidence = pulseRate.confidence
+             heartRateHistory.append(pulseRate.value)
+             if heartRateHistory.count > 60 {
+                 heartRateHistory.removeFirst()
+             }
+         }
 
         // Extract breathing rate
-        // if let breathingRate = buffer.breathing?.rate?.last {
-        //     currentRespirationRate = Int(breathingRate.value)
-        //     respirationConfidence = breathingRate.confidence
-        //     respirationHistory.append(breathingRate.value)
-        //     if respirationHistory.count > 60 {
-        //         respirationHistory.removeFirst()
-        //     }
-        // }
+         if let breathingRate = buffer.breathing?.rate?.last {
+             currentRespirationRate = Int(breathingRate.value)
+             respirationConfidence = breathingRate.confidence
+             respirationHistory.append(breathingRate.value)
+             if respirationHistory.count > 60 {
+                 respirationHistory.removeFirst()
+             }
+         }
 
         // Calculate HRV and alertness
         calculateMetrics()
@@ -124,7 +125,8 @@ class BiometricsViewModel: ObservableObject {
             startMockScan()
         } else {
             // Start actual SDK scanning
-            // sdk.startMeasurement()
+            vitalsProcessor.startProcessing()
+            vitalsProcessor.startRecording()
         }
 
         // 45-second scan duration
@@ -149,6 +151,12 @@ class BiometricsViewModel: ObservableObject {
         isScanning = false
         scanTimer?.invalidate()
         mockDataTimer?.invalidate()
+        
+        if !useMockData {
+            vitalsProcessor.stopProcessing()
+            vitalsProcessor.stopRecording()
+        }
+        
         scanProgress = 0.0
         readinessStatus = .calculating
     }
@@ -157,6 +165,12 @@ class BiometricsViewModel: ObservableObject {
         isScanning = false
         scanTimer?.invalidate()
         mockDataTimer?.invalidate()
+        
+        if !useMockData {
+            vitalsProcessor.stopProcessing()
+            vitalsProcessor.stopRecording()
+        }
+        
         scanProgress = 1.0
 
         // Calculate final readiness status

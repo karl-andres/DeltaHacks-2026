@@ -128,10 +128,31 @@ struct BiometricScanView: View {
 
     // MARK: - Scanning Area
     private var scanningArea: some View {
-        ScanningCircleView(
-            progress: biometricsVM.scanProgress,
-            faceDetected: biometricsVM.faceDetected
-        )
+        ZStack {
+            // Camera feed
+            if let image = biometricsVM.vitalsProcessor.imageOutput {
+                Image(uiImage: image)
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 300, height: 300)
+                    .clipShape(Circle())
+                    .overlay(
+                        Circle()
+                            .stroke(AppTheme.Colors.glassBorder, lineWidth: 1)
+                    )
+            } else {
+                // Placeholder when camera is not ready
+                Circle()
+                    .fill(.black)
+                    .frame(width: 300, height: 300)
+            }
+            
+            // Scanning overlay
+            ScanningCircleView(
+                progress: biometricsVM.scanProgress,
+                faceDetected: biometricsVM.faceDetected
+            )
+        }
     }
 
     // MARK: - Metrics Grid

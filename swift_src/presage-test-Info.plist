@@ -16,5 +16,7 @@
 		</dict>
 		<dict/>
 	</array>
+    <key>NSCameraUsageDescription</key>
+    <string>Camera access is required to measure your biometrics.</string>
 </dict>
 </plist>
