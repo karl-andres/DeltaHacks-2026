@@ -39,13 +39,13 @@ func sendVitalsToBackend(driverID: String, fullName: String, pulseData: [MetricP
     
     // --- THE FIX: MAPPING ---
     // This converts the non-Codable SDK array into your Codable MetricPoint array
-    let mappedPulse: [MetricPoint] = metricsBuffer.pulse.rate.map { measurement in
-        MetricPoint(time: Double(measurement.time), value: Double(measurement.value))
-    }
-    
-    let mappedBreathing: [MetricPoint] = metricsBuffer.breathing.rate.map { measurement in
-        MetricPoint(time: Double(measurement.time), value: Double(measurement.value))
-    }
+//    let mappedPulse: [MetricPoint] = metricsBuffer.pulse.rate.map { measurement in
+//        MetricPoint(time: Double(measurement.time), value: Double(measurement.value))
+//    }
+//    
+//    let mappedBreathing: [MetricPoint] = metricsBuffer.breathing.rate.map { measurement in
+//        MetricPoint(time: Double(measurement.time), value: Double(measurement.value))
+//    }
     
     let report = VitalsReport(
         driver_id: driverID,
