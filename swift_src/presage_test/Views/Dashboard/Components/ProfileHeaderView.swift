@@ -64,7 +64,7 @@ struct ProfileHeaderView: View {
 
             // Greeting text
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(greeting), Driver")
+                Text("\(greeting), Karl!")
                     .font(AppTheme.Typography.headline)
                     .fontWeight(.bold)
                     .foregroundStyle(AppTheme.Colors.textPrimary)

@@ -50,6 +50,7 @@ struct AppTheme {
         static let callout = Font.system(size: 14, weight: .medium, design: .rounded)
         static let caption = Font.system(size: 12, weight: .medium, design: .rounded)
         static let caption2 = Font.system(size: 10, weight: .medium, design: .rounded)
+        static let subheadline: Font = .subheadline
 
         // Metric Display
         static let metricValue = Font.system(size: 40, weight: .bold, design: .rounded)
