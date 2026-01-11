@@ -11,6 +11,9 @@ struct ProfileHeaderView: View {
     @EnvironmentObject var appState: AppStateManager
     @StateObject var manager = VitalsManager.shared
 
+    @State private var showResultAlert = false
+    @State private var resultStatus: ReadinessStatus?
+
     var greeting: String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
@@ -106,6 +109,19 @@ struct ProfileHeaderView: View {
             }
         }
         .padding(AppTheme.Spacing.md)
+        .onChange(of: manager.safetyResult) { _, newValue in
+            if let result = newValue {
+                // Map boolean result to ReadinessStatus
+                resultStatus = result ? .fit : .restAdvised
+                showResultAlert = true
+            }
+        }
+        .alert(
+            resultStatus == .fit ? "CLEARED" : "NOT CLEARED",
+            isPresented: $showResultAlert
+        ) {
+            Button("OK", role: .cancel) { }
+        }
     }
 }
 

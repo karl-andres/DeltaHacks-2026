@@ -15,9 +15,6 @@ struct BiometricScanView: View {
     @StateObject var manager = VitalsManager.shared
     @ObservedObject var sdk = SmartSpectraSwiftSDK.shared
 
-    @State private var showResultOverlay = false
-    @State private var resultStatus: ReadinessStatus?
-
     var metrics: Presage_Physiology_MetricsBuffer? {
         sdk.metricsBuffer
     }
@@ -73,28 +70,6 @@ struct BiometricScanView: View {
         .onAppear {
             if !biometricsVM.isScanning {
                 biometricsVM.startScan()
-            }
-        }
-        .onChange(of: manager.safetyResult) { _, newValue in
-            if let result = newValue {
-                // Map boolean result to ReadinessStatus
-                resultStatus = result ? .fit : .restAdvised
-                showResultOverlay = true
-
-                // After showing the overlay for 2 seconds, navigate to results
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
-                    showResultOverlay = false
-                    biometricsVM.cancelScan()
-                    if let status = resultStatus {
-                        appState.completeScan(result: status)
-                    }
-                    dismiss()
-                }
-            }
-        }
-        .overlay {
-            if showResultOverlay, let status = resultStatus {
-                resultOverlayView(status: status)
             }
         }
     }
@@ -261,58 +236,6 @@ struct BiometricScanView: View {
                     )
             }
         }
-    }
-
-    // MARK: - Result Overlay
-    @ViewBuilder
-    private func resultOverlayView(status: ReadinessStatus) -> some View {
-        ZStack {
-            // Semi-transparent backdrop
-            Color.black.opacity(0.8)
-                .ignoresSafeArea()
-
-            VStack(spacing: 24) {
-                // Animated icon
-                ZStack {
-                    Circle()
-                        .fill(status == .fit ? AppTheme.Colors.successGreen.opacity(0.2) : AppTheme.Colors.dangerRed.opacity(0.2))
-                        .frame(width: 120, height: 120)
-                        .blur(radius: 20)
-
-                    Circle()
-                        .fill(status == .fit ? AppTheme.Colors.successGreen : AppTheme.Colors.dangerRed)
-                        .frame(width: 100, height: 100)
-                        .overlay(
-                            Image(systemName: status == .fit ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                                .font(.system(size: 50))
-                                .foregroundStyle(.white)
-                        )
-                }
-                .shadow(color: (status == .fit ? AppTheme.Colors.successGreen : AppTheme.Colors.dangerRed).opacity(0.5), radius: 20)
-
-                // Status text
-                VStack(spacing: 8) {
-                    Text(status == .fit ? "CLEARED" : "NOT CLEARED")
-                        .font(.system(size: 32, weight: .heavy, design: .rounded))
-                        .foregroundStyle(status == .fit ? AppTheme.Colors.successGreen : AppTheme.Colors.dangerRed)
-
-                    Text(status == .fit ? "Driver is safe to operate" : "Driver requires rest")
-                        .font(AppTheme.Typography.callout)
-                        .foregroundStyle(AppTheme.Colors.textSecondary)
-                }
-            }
-            .padding(40)
-            .background(.ultraThinMaterial)
-            .background(AppTheme.Colors.glassFill)
-            .clipShape(RoundedRectangle(cornerRadius: 24))
-            .overlay(
-                RoundedRectangle(cornerRadius: 24)
-                    .stroke(AppTheme.Colors.glassBorder, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.5), radius: 30)
-        }
-        .transition(.opacity.combined(with: .scale))
-        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: showResultOverlay)
     }
 }
 
