@@ -5,6 +5,7 @@ struct ContentView: View {
     @ObservedObject var sdk = SmartSpectraSwiftSDK.shared
     @ObservedObject var vitalsProcessor = SmartSpectraVitalsProcessor.shared
     @State private var isVitalMonitoringEnabled: Bool = false
+    // EVERYTHING UNDER ESSENTIAL FOR ACTUALLY RETURNING ARRAYS OF PULSE AND BREATHE (DO NOT MODIFY)
     @State private var localPulseHistory: [MetricPoint] = []
     @State private var localBreathingHistory: [MetricPoint] = []
     @State private var samplingTimer: Timer? = nil
@@ -15,7 +16,7 @@ struct ContentView: View {
     
     init(mockStatus: String? = nil) {
         if !ProcessInfo.isPreview {
-            let apiKey = "TUyWFNnkI22tOqcet285S6kEV5bYvLSq9u6xtznO"
+            let apiKey = "XDTroSWEaP4ISp3zEfFRCaf1JhXFwfS817R0si6y"
             sdk.setApiKey(apiKey)
             sdk.setRecordingDelay(0)
         }
@@ -49,7 +50,7 @@ struct ContentView: View {
         }
     }
 
-// main functions for starting and stopping vital monitoring
+// main functions for starting and stopping vital monitoring (DO NOT MODIFY)
     func startVitalsMonitoring() {
         // Reset local buffers for a new session
         localPulseHistory = []
