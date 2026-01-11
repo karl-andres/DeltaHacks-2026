@@ -92,6 +92,11 @@ class AuthenticationManager: ObservableObject {
                credentials.password == password {
                 authState = .authenticated(credentials.driver)
                 saveSession(driver: credentials.driver)
+
+                // Fetch driver vitals from API
+                Task {
+                    await DriverVitalsManager.shared.fetchAndStoreVitals(for: credentials.driver)
+                }
             } else {
                 authState = .unauthenticated
                 errorMessage = "Invalid email or password"
@@ -103,6 +108,8 @@ class AuthenticationManager: ObservableObject {
         authState = .unauthenticated
         errorMessage = nil
         clearSession()
+        // Clear driver vitals on logout
+        DriverVitalsManager.shared.clearStoredVitals()
     }
 
     func checkExistingSession() {
@@ -110,6 +117,11 @@ class AuthenticationManager: ObservableObject {
         if let driverData = UserDefaults.standard.data(forKey: "savedDriver"),
            let driver = try? JSONDecoder().decode(Driver.self, from: driverData) {
             authState = .authenticated(driver)
+
+            // Fetch fresh driver vitals from API
+            Task {
+                await DriverVitalsManager.shared.fetchAndStoreVitals(for: driver)
+            }
         }
     }
 

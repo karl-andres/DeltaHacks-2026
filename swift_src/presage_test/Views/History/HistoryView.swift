@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var wellnessData: WellnessDataService
+    @ObservedObject var vitalsManager = DriverVitalsManager.shared
 
     @State private var showMetricDetail = false
     @State private var selectedMetric: MetricType?
@@ -159,11 +160,15 @@ struct HistoryView: View {
     // MARK: - Metrics History List
     private var metricsHistoryList: some View {
         VStack(spacing: 16) {
+            // Calculate averages based on selected time period
+            let daysToConsider = selectedPeriod == .day ? 1 : selectedPeriod == .week ? 7 : selectedPeriod == .month ? 30 : 365
+            let averages = vitalsManager.getAverageMetrics(for: daysToConsider)
+
             HistoryMetricCard(
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.roseAccent,
                 title: "Heart Rate",
-                average: "72",
+                average: vitalsManager.hasVitals ? String(format: "%.0f", averages.pulseRate) : "72",
                 unit: "BPM",
                 trend: "+2%",
                 trendUp: true,
@@ -191,7 +196,7 @@ struct HistoryView: View {
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
                 title: "Respiration Rate",
-                average: "14",
+                average: vitalsManager.hasVitals ? String(format: "%.1f", averages.breathingRate) : "14",
                 unit: "brpm",
                 trend: "0%",
                 trendUp: true,
@@ -205,8 +210,8 @@ struct HistoryView: View {
                 icon: "bolt.fill",
                 iconColor: AppTheme.Colors.primaryBlue,
                 title: "Alertness",
-                average: "85",
-                unit: "%",
+                average: vitalsManager.hasVitals ? String(format: "%.0f", averages.alertness) : "85",
+                unit: vitalsManager.hasVitals ? "idx" : "%",
                 trend: "-3%",
                 trendUp: false,
                 action: {

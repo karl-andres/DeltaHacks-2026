@@ -10,6 +10,7 @@ import SwiftUI
 struct WellnessDashboardView: View {
     @EnvironmentObject var biometricsVM: BiometricsViewModel
     @EnvironmentObject var wellnessData: WellnessDataService
+    @ObservedObject var vitalsManager = DriverVitalsManager.shared
 
     @State private var isSyncing = false
     @State private var lastSyncTime = Date()
@@ -82,14 +83,14 @@ struct WellnessDashboardView: View {
             columns: [GridItem(.flexible()), GridItem(.flexible())],
             spacing: 16
         ) {
-            // Heart Rate Card
+            // Heart Rate Card (use vitals data if available)
             MetricCardView(
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.roseAccent,
                 title: "Heart Rate",
-                value: "\(biometricsVM.currentHeartRate)",
+                value: vitalsManager.hasVitals ? String(format: "%.0f", vitalsManager.latestPulseRate) : "\(biometricsVM.currentHeartRate)",
                 unit: "BPM",
-                status: "Resting",
+                status: vitalsManager.hasVitals ? vitalsManager.vitalsStatus : "Resting",
                 statusColor: AppTheme.Colors.successGreen,
                 graphData: biometricsVM.heartRateHistory,
                 graphColor: AppTheme.Colors.roseAccent,
@@ -110,29 +111,29 @@ struct WellnessDashboardView: View {
                 graphType: .wave
             )
 
-            // Respiration Card
+            // Respiration Card (use vitals data if available)
             MetricCardView(
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
                 title: "Resp Rate",
-                value: "\(biometricsVM.currentRespirationRate)",
+                value: vitalsManager.hasVitals ? String(format: "%.1f", vitalsManager.latestBreathingRate) : "\(biometricsVM.currentRespirationRate)",
                 unit: "brpm",
-                status: "Normal",
+                status: vitalsManager.hasVitals ? vitalsManager.vitalsStatus : "Normal",
                 statusColor: AppTheme.Colors.skyAccent,
                 graphData: biometricsVM.respirationHistory,
                 graphColor: AppTheme.Colors.skyAccent,
                 graphType: .curve
             )
 
-            // Alertness Card
+            // Alertness Card (use vitals data if available)
             MetricCardView(
                 icon: "bolt.fill",
                 iconColor: AppTheme.Colors.primaryBlue,
                 title: "Alertness",
-                value: String(format: "%.0f", biometricsVM.alertnessLevel),
-                unit: "%",
-                status: AlertnessLevel.from(score: biometricsVM.alertnessLevel).rawValue,
-                statusColor: biometricsVM.alertnessLevel >= 75 ? AppTheme.Colors.primaryBlue : AppTheme.Colors.warningYellow,
+                value: vitalsManager.hasVitals ? String(format: "%.0f", vitalsManager.latestAlertnessIndex) : String(format: "%.0f", biometricsVM.alertnessLevel),
+                unit: vitalsManager.hasVitals ? "idx" : "%",
+                status: vitalsManager.hasVitals ? vitalsManager.vitalsStatus : AlertnessLevel.from(score: biometricsVM.alertnessLevel).rawValue,
+                statusColor: (vitalsManager.hasVitals ? vitalsManager.latestAlertnessIndex : biometricsVM.alertnessLevel) >= 75 ? AppTheme.Colors.primaryBlue : AppTheme.Colors.warningYellow,
                 graphData: biometricsVM.alertnessHistory,
                 graphColor: AppTheme.Colors.primaryBlue,
                 graphType: .line
