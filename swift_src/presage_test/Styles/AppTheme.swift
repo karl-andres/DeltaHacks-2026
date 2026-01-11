@@ -20,6 +20,7 @@ struct AppTheme {
         static let dangerRed = Color(hex: "#f20d0d")
         static let warningYellow = Color(hex: "#fbbf24")
         static let warningOrange = Color(hex: "#f97316")
+        static let errorRed = Color.red       
 
         // Status Colors
         static let infoBlue = Color(hex: "#3b82f6")

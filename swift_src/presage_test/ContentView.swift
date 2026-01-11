@@ -158,7 +158,15 @@ struct TabBarItem: View {
     }
 }
 
-// MARK: - Preview
+// so i can see on xcode
 #Preview {
+    // Pass in a string so you can see how the text fits in the UI
     ContentView()
+}
+
+// make sure to not load sdk if in preview mode
+extension ProcessInfo {
+    static var isPreview: Bool {
+        processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
 }
