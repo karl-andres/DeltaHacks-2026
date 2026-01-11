@@ -11,16 +11,9 @@ import Charts
 struct MetricDetailView: View {
     let metric: HistoryView.MetricType
     @Environment(\.dismiss) var dismiss
-
-    // Sample data for the chart
-    private var chartData: [DataPoint] {
-        (0..<30).map { day in
-            DataPoint(
-                day: day,
-                value: Double.random(in: valueRange)
-            )
-        }
-    }
+    
+    // Store chart data to ensure consistency between chart and statistics
+    @State private var chartData: [DataPoint] = []
 
     private var valueRange: ClosedRange<Double> {
         switch metric {
@@ -28,6 +21,16 @@ struct MetricDetailView: View {
         case .respiration: return 12...18
         case .riskScore: return 0...1
         case .pulseRespirationQuotient: return 3...6
+        }
+    }
+    
+    // Generate sample data for the chart (called once on appear)
+    private func generateChartData() -> [DataPoint] {
+        (0..<30).map { day in
+            DataPoint(
+                day: day,
+                value: Double.random(in: valueRange)
+            )
         }
     }
 
@@ -75,6 +78,11 @@ struct MetricDetailView: View {
             .toolbarBackground(.hidden, for: .navigationBar)
         }
         .navigationViewStyle(.stack)
+        .onAppear {
+            if chartData.isEmpty {
+                chartData = generateChartData()
+            }
+        }
     }
 
     // MARK: - Ambient Glow Effects
@@ -249,15 +257,41 @@ struct MetricDetailView: View {
 
     // MARK: - Helper Properties
     private var statisticValues: (average: String, highest: String, lowest: String) {
+        guard !chartData.isEmpty else {
+            // Return placeholder values if data hasn't loaded yet
+            return ("--", "--", "--")
+        }
+        
+        let values = chartData.map { $0.value }
+        let average = values.reduce(0, +) / Double(values.count)
+        let highest = values.max() ?? 0
+        let lowest = values.min() ?? 0
+        
         switch metric {
         case .heartRate:
-            return ("72 BPM", "88 BPM", "64 BPM")
+            return (
+                String(format: "%.0f BPM", average),
+                String(format: "%.0f BPM", highest),
+                String(format: "%.0f BPM", lowest)
+            )
         case .respiration:
-            return ("14 brpm", "17 brpm", "12 brpm")
+            return (
+                String(format: "%.1f brpm", average),
+                String(format: "%.1f brpm", highest),
+                String(format: "%.1f brpm", lowest)
+            )
         case .riskScore:
-            return ("0.25", "0.45", "0.15")
+            return (
+                String(format: "%.2f", average),
+                String(format: "%.2f", highest),
+                String(format: "%.2f", lowest)
+            )
         case .pulseRespirationQuotient:
-            return ("4.5 ratio", "5.2 ratio", "3.8 ratio")
+            return (
+                String(format: "%.1f ratio", average),
+                String(format: "%.1f ratio", highest),
+                String(format: "%.1f ratio", lowest)
+            )
         }
     }
 
