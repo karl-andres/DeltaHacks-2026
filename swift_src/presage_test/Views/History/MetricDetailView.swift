@@ -25,9 +25,9 @@ struct MetricDetailView: View {
     private var valueRange: ClosedRange<Double> {
         switch metric {
         case .heartRate: return 60...90
-        case .hrv: return 80...110
         case .respiration: return 12...18
-        case .alertness: return 70...95
+        case .riskScore: return 0...1
+        case .pulseRespirationQuotient: return 3...6
         }
     }
 
@@ -72,7 +72,9 @@ struct MetricDetailView: View {
                     }
                 }
             }
+            .toolbarBackground(.hidden, for: .navigationBar)
         }
+        .navigationViewStyle(.stack)
     }
 
     // MARK: - Ambient Glow Effects
@@ -250,12 +252,12 @@ struct MetricDetailView: View {
         switch metric {
         case .heartRate:
             return ("72 BPM", "88 BPM", "64 BPM")
-        case .hrv:
-            return ("98 ms", "108 ms", "82 ms")
         case .respiration:
             return ("14 brpm", "17 brpm", "12 brpm")
-        case .alertness:
-            return ("85%", "94%", "73%")
+        case .riskScore:
+            return ("0.25", "0.45", "0.15")
+        case .pulseRespirationQuotient:
+            return ("4.5 ratio", "5.2 ratio", "3.8 ratio")
         }
     }
 
@@ -263,12 +265,12 @@ struct MetricDetailView: View {
         switch metric {
         case .heartRate:
             return "Your heart rate has been consistently within a healthy range. The slight increase during afternoon shifts is normal and indicates good cardiovascular response to activity."
-        case .hrv:
-            return "Your HRV shows good variability, indicating strong recovery and stress management. The upward trend suggests improving cardiovascular fitness."
         case .respiration:
             return "Your breathing rate is stable and within the optimal range. This indicates good respiratory health and effective stress management during shifts."
-        case .alertness:
-            return "Your alertness levels remain high throughout most shifts. The slight dips in the evening are normal. Consider short breaks to maintain peak performance."
+        case .riskScore:
+            return "Your risk score remains low, indicating good overall health. Continue maintaining healthy habits and regular monitoring to keep your risk levels minimal."
+        case .pulseRespirationQuotient:
+            return "Your pulse-respiration quotient is within normal range, showing balanced cardiovascular and respiratory function. This metric helps assess overall physiological coordination."
         }
     }
 }

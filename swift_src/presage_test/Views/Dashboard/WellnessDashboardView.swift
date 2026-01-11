@@ -12,9 +12,6 @@ struct WellnessDashboardView: View {
     @EnvironmentObject var wellnessData: WellnessDataService
     @ObservedObject var vitalsManager = DriverVitalsManager.shared
 
-    @State private var isSyncing = false
-    @State private var lastSyncTime = Date()
-
     var body: some View {
         ZStack {
             // Background
@@ -49,9 +46,6 @@ struct WellnessDashboardView: View {
                     // Metrics grid
                     metricsGrid
 
-                    // Sync wearable button
-                    syncWearableButton
-
                     // Bottom spacing for tab bar
                     Color.clear.frame(height: 100)
                 }
@@ -83,7 +77,7 @@ struct WellnessDashboardView: View {
             columns: [GridItem(.flexible()), GridItem(.flexible())],
             spacing: 16
         ) {
-            // Heart Rate Card (use vitals data if available)
+            // Heart Rate Card (pulse_rate)
             MetricCardView(
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.roseAccent,
@@ -97,21 +91,7 @@ struct WellnessDashboardView: View {
                 graphType: .line
             )
 
-            // HRV Card
-            MetricCardView(
-                icon: "waveform.path.ecg",
-                iconColor: AppTheme.Colors.purpleAccent,
-                title: "HRV",
-                value: "\(biometricsVM.hrvScore)",
-                unit: "ms",
-                status: "Ready",
-                statusColor: AppTheme.Colors.purpleAccent,
-                graphData: biometricsVM.hrvHistory,
-                graphColor: AppTheme.Colors.purpleAccent,
-                graphType: .wave
-            )
-
-            // Respiration Card (use vitals data if available)
+            // Respiration Card (breathing_rate)
             MetricCardView(
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
@@ -125,115 +105,35 @@ struct WellnessDashboardView: View {
                 graphType: .curve
             )
 
-            // Alertness Card (use vitals data if available)
+            // Risk Score Card (risk_score)
             MetricCardView(
-                icon: "bolt.fill",
-                iconColor: AppTheme.Colors.primaryBlue,
-                title: "Alertness",
-                value: vitalsManager.hasVitals ? String(format: "%.0f", vitalsManager.latestAlertnessIndex) : String(format: "%.0f", biometricsVM.alertnessLevel),
-                unit: vitalsManager.hasVitals ? "idx" : "%",
-                status: vitalsManager.hasVitals ? vitalsManager.vitalsStatus : AlertnessLevel.from(score: biometricsVM.alertnessLevel).rawValue,
-                statusColor: (vitalsManager.hasVitals ? vitalsManager.latestAlertnessIndex : biometricsVM.alertnessLevel) >= 75 ? AppTheme.Colors.primaryBlue : AppTheme.Colors.warningYellow,
-                graphData: biometricsVM.alertnessHistory,
-                graphColor: AppTheme.Colors.primaryBlue,
+                icon: "exclamationmark.triangle.fill",
+                iconColor: AppTheme.Colors.warningYellow,
+                title: "Risk Score",
+                value: vitalsManager.hasVitals ? String(format: "%.2f", vitalsManager.latestRiskScore) : "0.00",
+                unit: "",
+                status: vitalsManager.hasVitals ? (vitalsManager.latestRiskScore < 0.3 ? "Low" : vitalsManager.latestRiskScore < 0.7 ? "Medium" : "High") : "Unknown",
+                statusColor: vitalsManager.hasVitals ? (vitalsManager.latestRiskScore < 0.3 ? AppTheme.Colors.successGreen : vitalsManager.latestRiskScore < 0.7 ? AppTheme.Colors.warningYellow : AppTheme.Colors.errorRed) : AppTheme.Colors.textTertiary,
+                graphData: biometricsVM.heartRateHistory,
+                graphColor: AppTheme.Colors.warningYellow,
                 graphType: .line
             )
-        }
-        .padding(.horizontal, AppTheme.Spacing.md)
-    }
 
-    // MARK: - Sync Wearable Button
-    private var syncWearableButton: some View {
-        Button(action: syncWearable) {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(Color.white.opacity(0.1))
-                        .frame(width: 40, height: 40)
-
-                    if isSyncing {
-                        ProgressView()
-                            .tint(AppTheme.Colors.textPrimary)
-                    } else {
-                        Image(systemName: "arrow.triangle.2.circlepath")
-                            .font(.system(size: 20))
-                            .foregroundStyle(AppTheme.Colors.textPrimary)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(isSyncing ? "Syncing..." : "Sync Wearable")
-                        .font(AppTheme.Typography.callout)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppTheme.Colors.textPrimary)
-
-                    Text("Last sync: \(timeSinceLastSync)")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundStyle(AppTheme.Colors.textTertiary)
-                }
-
-                Spacer()
-
-                if !isSyncing {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14))
-                        .foregroundStyle(AppTheme.Colors.textTertiary)
-                }
-            }
-            .padding(AppTheme.Spacing.md)
-            .background(.ultraThinMaterial)
-            .background(AppTheme.Colors.glassFill)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large))
-            .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.CornerRadius.large)
-                    .stroke(
-                        isSyncing ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
-                        lineWidth: isSyncing ? 2 : 1
-                    )
+            // Pulse Respiration Quotient Card (pulse_respiration_quotient)
+            MetricCardView(
+                icon: "waveform.path.ecg",
+                iconColor: AppTheme.Colors.purpleAccent,
+                title: "PRQ",
+                value: vitalsManager.hasVitals ? String(format: "%.1f", vitalsManager.latestPulseRespirationQuotient) : "0.0",
+                unit: "ratio",
+                status: vitalsManager.hasVitals ? vitalsManager.vitalsStatus : "Unknown",
+                statusColor: AppTheme.Colors.purpleAccent,
+                graphData: biometricsVM.hrvHistory,
+                graphColor: AppTheme.Colors.purpleAccent,
+                graphType: .wave
             )
         }
-        .disabled(isSyncing)
         .padding(.horizontal, AppTheme.Spacing.md)
-        .padding(.top, AppTheme.Spacing.lg)
-    }
-
-    // MARK: - Sync Action
-    private func syncWearable() {
-        withAnimation {
-            isSyncing = true
-        }
-
-        Task {
-            // Simulate syncing with wearable device
-            try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-
-            await MainActor.run {
-                // Update biometrics with fresh data
-                biometricsVM.refreshMetrics()
-                lastSyncTime = Date()
-
-                withAnimation {
-                    isSyncing = false
-                }
-            }
-        }
-    }
-
-    // MARK: - Time Since Last Sync
-    private var timeSinceLastSync: String {
-        let interval = Date().timeIntervalSince(lastSyncTime)
-        let minutes = Int(interval / 60)
-
-        if minutes < 1 {
-            return "Just now"
-        } else if minutes == 1 {
-            return "1 min ago"
-        } else if minutes < 60 {
-            return "\(minutes) min ago"
-        } else {
-            let hours = minutes / 60
-            return "\(hours) hour\(hours > 1 ? "s" : "") ago"
-        }
     }
 
     // MARK: - Helper

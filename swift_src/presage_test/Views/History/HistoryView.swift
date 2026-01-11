@@ -16,34 +16,34 @@ struct HistoryView: View {
 
     enum MetricType {
         case heartRate
-        case hrv
         case respiration
-        case alertness
+        case riskScore
+        case pulseRespirationQuotient
 
         var title: String {
             switch self {
             case .heartRate: return "Heart Rate"
-            case .hrv: return "HRV"
             case .respiration: return "Respiration Rate"
-            case .alertness: return "Alertness"
+            case .riskScore: return "Risk Score"
+            case .pulseRespirationQuotient: return "PRQ"
             }
         }
 
         var icon: String {
             switch self {
             case .heartRate: return "heart.fill"
-            case .hrv: return "waveform.path.ecg"
             case .respiration: return "wind"
-            case .alertness: return "bolt.fill"
+            case .riskScore: return "exclamationmark.triangle.fill"
+            case .pulseRespirationQuotient: return "waveform.path.ecg"
             }
         }
 
         var color: Color {
             switch self {
             case .heartRate: return AppTheme.Colors.roseAccent
-            case .hrv: return AppTheme.Colors.purpleAccent
             case .respiration: return AppTheme.Colors.skyAccent
-            case .alertness: return AppTheme.Colors.primaryBlue
+            case .riskScore: return AppTheme.Colors.warningYellow
+            case .pulseRespirationQuotient: return AppTheme.Colors.purpleAccent
             }
         }
     }
@@ -179,20 +179,6 @@ struct HistoryView: View {
             )
 
             HistoryMetricCard(
-                icon: "waveform.path.ecg",
-                iconColor: AppTheme.Colors.purpleAccent,
-                title: "HRV",
-                average: "98",
-                unit: "ms",
-                trend: "+5%",
-                trendUp: true,
-                action: {
-                    selectedMetric = .hrv
-                    showMetricDetail = true
-                }
-            )
-
-            HistoryMetricCard(
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
                 title: "Respiration Rate",
@@ -207,15 +193,29 @@ struct HistoryView: View {
             )
 
             HistoryMetricCard(
-                icon: "bolt.fill",
-                iconColor: AppTheme.Colors.primaryBlue,
-                title: "Alertness",
-                average: vitalsManager.hasVitals ? String(format: "%.0f", averages.alertness) : "85",
-                unit: vitalsManager.hasVitals ? "idx" : "%",
-                trend: "-3%",
+                icon: "exclamationmark.triangle.fill",
+                iconColor: AppTheme.Colors.warningYellow,
+                title: "Risk Score",
+                average: vitalsManager.hasVitals ? String(format: "%.2f", averages.riskScore) : "0.00",
+                unit: "",
+                trend: "-5%",
                 trendUp: false,
                 action: {
-                    selectedMetric = .alertness
+                    selectedMetric = .riskScore
+                    showMetricDetail = true
+                }
+            )
+
+            HistoryMetricCard(
+                icon: "waveform.path.ecg",
+                iconColor: AppTheme.Colors.purpleAccent,
+                title: "PRQ",
+                average: vitalsManager.hasVitals ? String(format: "%.1f", averages.pulseRespirationQuotient) : "0.0",
+                unit: "ratio",
+                trend: "+1%",
+                trendUp: true,
+                action: {
+                    selectedMetric = .pulseRespirationQuotient
                     showMetricDetail = true
                 }
             )

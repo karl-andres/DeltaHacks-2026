@@ -112,6 +112,10 @@ class DriverVitalsManager: ObservableObject {
         currentVitals?.riskScore ?? 0
     }
 
+    var latestPulseRespirationQuotient: Double {
+        currentVitals?.pulseRespirationQuotient ?? 0
+    }
+
     var vitalsStatus: String {
         currentVitals?.status ?? "Unknown"
     }
@@ -122,23 +126,25 @@ class DriverVitalsManager: ObservableObject {
         return vitalsHistory.filter { $0.timestamp >= cutoffDate }
     }
 
-    func getAverageMetrics(for days: Int) -> (pulseRate: Double, breathingRate: Double, alertness: Double) {
+    func getAverageMetrics(for days: Int) -> (pulseRate: Double, breathingRate: Double, riskScore: Double, pulseRespirationQuotient: Double) {
         let vitals = getVitalsForTimePeriod(days: days)
 
         guard !vitals.isEmpty else {
-            return (0, 0, 0)
+            return (0, 0, 0, 0)
         }
 
         let totalPulse = vitals.compactMap { $0.pulseRate }.reduce(0, +)
         let totalBreathing = vitals.compactMap { $0.breathingRate }.reduce(0, +)
-        let totalAlertness = vitals.compactMap { $0.nonlinearAlertnessIndex }.reduce(0, +)
+        let totalRiskScore = vitals.compactMap { $0.riskScore }.reduce(0, +)
+        let totalPRQ = vitals.compactMap { $0.pulseRespirationQuotient }.reduce(0, +)
 
         let count = Double(vitals.count)
 
         return (
             pulseRate: totalPulse / count,
             breathingRate: totalBreathing / count,
-            alertness: totalAlertness / count
+            riskScore: totalRiskScore / count,
+            pulseRespirationQuotient: totalPRQ / count
         )
     }
 
