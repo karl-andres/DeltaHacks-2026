@@ -20,12 +20,15 @@ class Scan(Base):
     driver_id = Column(String, index=True)
     fullname = Column(String)
     timestamp = Column(DateTime)
+
     pulse_respiration_quotient = Column(Float) # pulseRespirationQuotient
-    inhale_exhale_ratio = Column(Float) # inhaleExhaleRatio
     breathing_rate = Column(Float) # Breathing.rate
     pulse_rate = Column(Float) # Pulse.rate
-    amplitude = Column(Float) # Amplitude
-    landmarks_stable = Column(Boolean) # Landmarks.stable
+
+    integrated_vital_score = Column(Float)
+    cardio_respiratory_coupler = Column(Float) 
+    nonlinear_alertness_index = Column(Float)
+    
     status = Column(String)
     risk_score = Column(Float) # riskscore
     fail_reason = Column(String) # failreason
