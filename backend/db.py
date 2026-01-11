@@ -29,6 +29,7 @@ class Scan(Base):
     cardio_respiratory_coupler = Column(Float) 
     nonlinear_alertness_index = Column(Float)
     
+    
     status = Column(String)
     risk_score = Column(Float) # riskscore
     fail_reason = Column(String) # failreason

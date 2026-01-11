@@ -101,12 +101,13 @@ def detection(data):
     print(f"[Detection] HR:{pulse_rate:.1f} RR:{breathing_rate:.1f} -> Risk:{risk_score} ({status_str})")
 
     # --- 4. Database Saving ---
+    # --- 4. Database Saving ---
+    db = SessionLocal()
     try:
         driver_id = data_dict.get('driver_id', 'unknown')
         fullname = data_dict.get('fullname', 'unknown')
         timestamp = data_dict.get('timestamp')
 
-        db = SessionLocal()
         new_scan = Scan(
             driver_id=driver_id,
             fullname=fullname,
@@ -125,11 +126,13 @@ def detection(data):
         )
         db.add(new_scan)
         db.commit()
-        db.close()
         print(f"[Database] Scan saved.")
 
     except Exception as e:
         print(f"[Database] Save failed: {e}")
+        db.rollback()
+    finally:
+        db.close()
 
     # --- 5. Return Boolean ---
     return is_fit
