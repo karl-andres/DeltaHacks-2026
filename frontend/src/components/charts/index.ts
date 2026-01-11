@@ -1,0 +1,1 @@
+export { VitalsChart } from './VitalsChart';

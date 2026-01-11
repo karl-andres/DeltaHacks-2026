@@ -11,7 +11,7 @@ struct LiveMetricsCard: View {
     let icon: String
     let iconColor: Color
     let title: String
-    let value: Int
+    let value: Float?
     let unit: String
     let status: String
     let showPulse: Bool
@@ -43,15 +43,22 @@ struct LiveMetricsCard: View {
 
                 // Value display
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(value)")
-                        .font(AppTheme.Typography.metricValue.weight(.bold))
-                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                    if let value {
+                        Text(String(format: "%.0f", value))
+                            .font(AppTheme.Typography.metricValue.weight(.bold))
+                            .foregroundStyle(AppTheme.Colors.textPrimary)
+                    } else {
+                        Text("—")
+                            .font(AppTheme.Typography.metricValue.weight(.bold))
+                            .foregroundStyle(AppTheme.Colors.textTertiary)
+                    }
 
                     Text(unit)
                         .font(AppTheme.Typography.callout)
                         .fontWeight(.medium)
                         .foregroundStyle(AppTheme.Colors.textTertiary)
                 }
+
             }
         }
     }

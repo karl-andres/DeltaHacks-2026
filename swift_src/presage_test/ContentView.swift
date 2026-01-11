@@ -164,7 +164,6 @@ struct TabBarItem: View {
     ContentView()
 }
 
-// make sure to not load sdk if in preview mode
 extension ProcessInfo {
     static var isPreview: Bool {
         processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
