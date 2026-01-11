@@ -20,7 +20,7 @@ struct VitalsReport: Codable {
     let landmarks_stable: Bool
 }
 
-func sendVitalsToBackend(driverID: String, fullName: String, pulseData: [MetricPoint], breathingData: [MetricPoint], completion: @escaping (Bool) -> Void) {
+func sendVitalsToBackend(driverID: String, fullName: String, pulseData: [MetricPoint], breathingData: [MetricPoint], completion: @escaping (BackendResponse?) -> Void) {
     let sdk = SmartSpectraSwiftSDK.shared
     
     guard let metricsBuffer = sdk.metricsBuffer else {

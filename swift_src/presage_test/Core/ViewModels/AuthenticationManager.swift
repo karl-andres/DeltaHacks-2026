@@ -11,61 +11,7 @@ import SwiftUI
 class AuthenticationManager: ObservableObject {
     @Published private(set) var authState: AuthState = .unauthenticated
     @Published var errorMessage: String?
-
-    // Simulated driver database
-    private let driverDatabase: [String: (password: String, driver: Driver)] = [
-        "john.driver@trucking.com": (
-            password: "password123",
-            driver: Driver(
-                id: UUID().uuidString,
-                name: "John Driver",
-                email: "john.driver@trucking.com",
-                phone: "+1 (555) 123-4567",
-                company: "Swift Transport",
-                driverId: "DRV-2024-1247",
-                shiftType: .day,
-                licenseNumber: "CDL-ABC-123456",
-                dateJoined: Date().addingTimeInterval(-365 * 24 * 60 * 60),
-                totalShifts: 247,
-                hoursDrivern: 1842,
-                averageAlertness: 87
-            )
-        ),
-        "jane.night@trucking.com": (
-            password: "night456",
-            driver: Driver(
-                id: UUID().uuidString,
-                name: "Jane Wilson",
-                email: "jane.night@trucking.com",
-                phone: "+1 (555) 987-6543",
-                company: "Swift Transport",
-                driverId: "DRV-2024-0892",
-                shiftType: .night,
-                licenseNumber: "CDL-XYZ-789012",
-                dateJoined: Date().addingTimeInterval(-180 * 24 * 60 * 60),
-                totalShifts: 156,
-                hoursDrivern: 1124,
-                averageAlertness: 82
-            )
-        ),
-        "demo@driver.com": (
-            password: "demo",
-            driver: Driver(
-                id: UUID().uuidString,
-                name: "Demo Driver",
-                email: "demo@driver.com",
-                phone: "+1 (555) 000-0000",
-                company: "Demo Transport Co.",
-                driverId: "DRV-DEMO-0001",
-                shiftType: .day,
-                licenseNumber: "CDL-DEMO-000",
-                dateJoined: Date(),
-                totalShifts: 50,
-                hoursDrivern: 400,
-                averageAlertness: 90
-            )
-        )
-    ]
+    @Published var isLoading: Bool = false
 
     var isAuthenticated: Bool {
         authState.isAuthenticated
@@ -77,25 +23,88 @@ class AuthenticationManager: ObservableObject {
 
     // MARK: - Authentication Actions
 
-    func login(email: String, password: String) async {
+    func login(fullName: String, driverID: String) async {
         await MainActor.run {
+            isLoading = true
             authState = .authenticating
             errorMessage = nil
         }
 
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+        // Validate inputs
+        guard !fullName.isEmpty, !driverID.isEmpty else {
+            await MainActor.run {
+                errorMessage = "Please enter both full name and driver ID"
+                isLoading = false
+                authState = .unauthenticated
+            }
+            return
+        }
+
+        do {
+            // Fetch driver history from backend
+            let historyResponse = try await NetworkService.shared.fetchDriverHistory(fullName: fullName)
+
+            // Verify driverID matches
+            guard historyResponse.driver_id == driverID else {
+                await MainActor.run {
+                    errorMessage = "Invalid driver credentials"
+                    isLoading = false
+                    authState = .unauthenticated
+                }
+                return
+            }
+
+            // Create driver object from response
+            let driver = Driver(
+                id: UUID().uuidString,
+                name: fullName,
+                email: "",  // Not used anymore
+                phone: "",
+                company: "Swift Transport",
+                driverId: driverID,
+                shiftType: .day,
+                licenseNumber: "",
+                dateJoined: Date(),
+                totalShifts: historyResponse.scan_history.count,
+                hoursDrivern: 0,
+                averageAlertness: 0
+            )
+
+            // Load scan history into service
+            await loadHistoryIntoService(historyResponse.scan_history)
+
+            await MainActor.run {
+                authState = .authenticated(driver)
+                saveSession(driver: driver)
+                isLoading = false
+            }
+
+        } catch {
+            await MainActor.run {
+                errorMessage = "Login failed: \(error.localizedDescription)"
+                isLoading = false
+                authState = .unauthenticated
+            }
+        }
+    }
+
+    // MARK: - Load History from Backend
+
+    private func loadHistoryIntoService(_ backendScans: [BackendScanResult]) async {
+        let scanRecords = backendScans.map { backendResult in
+            ScanRecord(
+                timestamp: Date(timeIntervalSince1970: backendResult.timestamp),
+                heartRate: Int(backendResult.pulse_rate),
+                respirationRate: Int(backendResult.breathing_rate),
+                alertnessScore: Double(backendResult.integrated_vital_score),
+                status: backendResult.status,
+                riskScore: backendResult.risk_score,
+                backendResult: backendResult
+            )
+        }
 
         await MainActor.run {
-            // Validate credentials
-            if let credentials = driverDatabase[email.lowercased()],
-               credentials.password == password {
-                authState = .authenticated(credentials.driver)
-                saveSession(driver: credentials.driver)
-            } else {
-                authState = .unauthenticated
-                errorMessage = "Invalid email or password"
-            }
+            ScanHistoryService.shared.setHistory(scanRecords)
         }
     }
 

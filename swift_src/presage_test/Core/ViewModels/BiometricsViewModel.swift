@@ -12,6 +12,16 @@ import SmartSpectraSwiftSDK
 class BiometricsViewModel: ObservableObject {
     // MARK: - SDK Integration
     @Published var sdk = SmartSpectraSwiftSDK.shared
+    @ObservedObject var vitalsManager = VitalsManager()
+
+    // MARK: - Driver Info
+    var currentDriverID: String = ""
+    var currentFullName: String = ""
+
+    func setDriverInfo(driverID: String, fullName: String) {
+        self.currentDriverID = driverID
+        self.currentFullName = fullName
+    }
 
     // MARK: - Real-time Metrics
     @Published var currentHeartRate: Int = 0
@@ -36,20 +46,33 @@ class BiometricsViewModel: ObservableObject {
     @Published var scanProgress: Double = 0.0
 
     // MARK: - Mock Data Mode
-    var useMockData: Bool = true  // Set to false when SDK is properly configured
+    var useMockData: Bool = false  // Changed to false for real SDK usage
 
     private var cancellables = Set<AnyCancellable>()
     private var scanTimer: Timer?
     private var mockDataTimer: Timer?
+    private var realTimeTimer: Timer?
 
     // MARK: - Initialization
     init() {
         setupSDKObservers()
+        setupBackendResultObserver()
 
         // Initialize with mock data for development
         if useMockData {
             initializeMockData()
         }
+    }
+
+    // MARK: - Backend Result Observer
+    private func setupBackendResultObserver() {
+        vitalsManager.$latestBackendResult
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] result in
+                guard let self = self, let result = result else { return }
+                self.handleBackendResponse(result)
+            }
+            .store(in: &cancellables)
     }
 
     // MARK: - SDK Observers
@@ -113,6 +136,7 @@ class BiometricsViewModel: ObservableObject {
         isScanning = true
         scanProgress = 0.0
         readinessStatus = .scanning
+        faceDetected = false
 
         // Clear history
         heartRateHistory.removeAll()
@@ -123,25 +147,55 @@ class BiometricsViewModel: ObservableObject {
         if useMockData {
             startMockScan()
         } else {
-            // Start actual SDK scanning
-            // sdk.startMeasurement()
+            // Start VitalsManager (real SDK)
+            vitalsManager.startMonitoring()
+            startRealTimePolling()
         }
 
-        // 45-second scan duration
-        scanTimer = Timer.scheduledTimer(withTimeInterval: 45.0, repeats: false) { [weak self] _ in
+        // 10-second scan duration (changed from 45s)
+        scanTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
             self?.completeScan()
         }
 
-        // Update progress
+        // Update progress for 10 seconds
         Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
             guard let self = self, self.isScanning else {
                 timer.invalidate()
                 return
             }
-            self.scanProgress += (0.5 / 45.0)
+            self.scanProgress += (0.5 / 10.0)  // Changed from 45.0
             if self.scanProgress >= 1.0 {
                 timer.invalidate()
             }
+        }
+    }
+
+    // MARK: - Real-time Polling
+    private func startRealTimePolling() {
+        realTimeTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+
+            // Extract latest values from VitalsManager
+            if let latestPulse = self.vitalsManager.localPulseHistory.last {
+                self.currentHeartRate = Int(latestPulse.value)
+                self.heartRateHistory.append(latestPulse.value)
+            }
+
+            if let latestBreathing = self.vitalsManager.localBreathingHistory.last {
+                self.currentRespirationRate = Int(latestBreathing.value)
+                self.respirationHistory.append(latestBreathing.value)
+            }
+
+            // Keep only last 60 values for graphs
+            if self.heartRateHistory.count > 60 {
+                self.heartRateHistory.removeFirst()
+            }
+            if self.respirationHistory.count > 60 {
+                self.respirationHistory.removeFirst()
+            }
+
+            // Update calculated metrics
+            self.calculateMetrics()
         }
     }
 
@@ -154,13 +208,65 @@ class BiometricsViewModel: ObservableObject {
     }
 
     func completeScan() {
-        isScanning = false
+        guard isScanning else { return }
+
+        // Stop timers
         scanTimer?.invalidate()
         mockDataTimer?.invalidate()
+        realTimeTimer?.invalidate()
+        scanTimer = nil
+        mockDataTimer = nil
+        realTimeTimer = nil
+
+        isScanning = false
         scanProgress = 1.0
 
-        // Calculate final readiness status
-        readinessStatus = calculateReadinessStatus()
+        // Stop VitalsManager with upload
+        if !useMockData {
+            vitalsManager.stopMonitoring(
+                shouldUpload: true,
+                driverID: currentDriverID,
+                fullName: currentFullName
+            )
+        }
+
+        // Calculate final metrics
+        calculateMetrics()
+
+        // Determine readiness status
+        let readiness = determineReadinessStatus()
+        readinessStatus = readiness
+
+        // Wait for backend response (will be handled via callback)
+    }
+
+    private func determineReadinessStatus() -> ReadinessStatus {
+        if alertnessLevel < 50 || hrvScore < 30 {
+            return .needsRest
+        }
+        return .approvedForDuty
+    }
+
+    // MARK: - Backend Response Handler
+    func handleBackendResponse(_ backendResult: BackendScanResult) {
+        // Create scan record
+        let scanRecord = ScanRecord(
+            timestamp: Date(),
+            heartRate: currentHeartRate,
+            respirationRate: currentRespirationRate,
+            alertnessScore: alertnessLevel,
+            status: backendResult.status,
+            riskScore: backendResult.risk_score,
+            backendResult: backendResult
+        )
+
+        // Save to history service
+        ScanHistoryService.shared.saveScan(scanRecord)
+
+        // Update readiness based on backend status
+        if backendResult.status == "at_risk" {
+            readinessStatus = .needsRest
+        }
     }
 
     func refreshMetrics() {

@@ -10,13 +10,12 @@ import SwiftUI
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthenticationManager
 
-    @State private var email = ""
-    @State private var password = ""
-    @State private var showPassword = false
+    @State private var fullName = ""
+    @State private var driverID = ""
     @FocusState private var focusedField: Field?
 
     enum Field {
-        case email, password
+        case fullName, driverID
     }
 
     var body: some View {
@@ -47,16 +46,13 @@ struct LoginView: View {
                         errorView(message: errorMessage)
                     }
 
-                    // Demo credentials hint
-                    demoCredentialsHint
-
                     Spacer()
                 }
                 .padding(.horizontal, AppTheme.Spacing.lg)
             }
         }
         .onAppear {
-            focusedField = .email
+            focusedField = .fullName
         }
     }
 
@@ -115,29 +111,29 @@ struct LoginView: View {
     // MARK: - Login Form
     private var loginForm: some View {
         VStack(spacing: 16) {
-            // Email field
+            // Full Name field
             VStack(alignment: .leading, spacing: 8) {
-                Text("Email")
+                Text("Full Name")
                     .font(AppTheme.Typography.callout)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
 
                 HStack(spacing: 12) {
-                    Image(systemName: "envelope.fill")
+                    Image(systemName: "person.fill")
                         .font(.system(size: 18))
                         .foregroundStyle(AppTheme.Colors.primaryBlue)
                         .frame(width: 24)
 
-                    TextField("driver@trucking.com", text: $email)
+                    TextField("John Doe", text: $fullName)
                         .font(AppTheme.Typography.body)
                         .foregroundStyle(AppTheme.Colors.textPrimary)
-                        .textInputAutocapitalization(.never)
-                        .keyboardType(.emailAddress)
+                        .textContentType(.name)
+                        .autocapitalization(.words)
                         .autocorrectionDisabled()
-                        .focused($focusedField, equals: .email)
+                        .focused($focusedField, equals: .fullName)
                         .submitLabel(.next)
                         .onSubmit {
-                            focusedField = .password
+                            focusedField = .driverID
                         }
                 }
                 .padding(AppTheme.Spacing.md)
@@ -147,52 +143,36 @@ struct LoginView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
                         .stroke(
-                            focusedField == .email ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
-                            lineWidth: focusedField == .email ? 2 : 1
+                            focusedField == .fullName ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
+                            lineWidth: focusedField == .fullName ? 2 : 1
                         )
                 )
             }
 
-            // Password field
+            // Driver ID field
             VStack(alignment: .leading, spacing: 8) {
-                Text("Password")
+                Text("Driver ID")
                     .font(AppTheme.Typography.callout)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.Colors.textSecondary)
 
                 HStack(spacing: 12) {
-                    Image(systemName: "lock.fill")
+                    Image(systemName: "number")
                         .font(.system(size: 18))
                         .foregroundStyle(AppTheme.Colors.primaryBlue)
                         .frame(width: 24)
 
-                    if showPassword {
-                        TextField("Enter your password", text: $password)
-                            .font(AppTheme.Typography.body)
-                            .foregroundStyle(AppTheme.Colors.textPrimary)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                performLogin()
-                            }
-                    } else {
-                        SecureField("Enter your password", text: $password)
-                            .font(AppTheme.Typography.body)
-                            .foregroundStyle(AppTheme.Colors.textPrimary)
-                            .focused($focusedField, equals: .password)
-                            .submitLabel(.go)
-                            .onSubmit {
-                                performLogin()
-                            }
-                    }
-
-                    Button(action: {
-                        showPassword.toggle()
-                    }) {
-                        Image(systemName: showPassword ? "eye.slash.fill" : "eye.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(AppTheme.Colors.textTertiary)
-                    }
+                    TextField("100200", text: $driverID)
+                        .font(AppTheme.Typography.body)
+                        .foregroundStyle(AppTheme.Colors.textPrimary)
+                        .textContentType(.none)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                        .focused($focusedField, equals: .driverID)
+                        .submitLabel(.go)
+                        .onSubmit {
+                            performLogin()
+                        }
                 }
                 .padding(AppTheme.Spacing.md)
                 .background(.ultraThinMaterial)
@@ -201,8 +181,8 @@ struct LoginView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium)
                         .stroke(
-                            focusedField == .password ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
-                            lineWidth: focusedField == .password ? 2 : 1
+                            focusedField == .driverID ? AppTheme.Colors.primaryBlue : AppTheme.Colors.glassBorder,
+                            lineWidth: focusedField == .driverID ? 2 : 1
                         )
                 )
             }
@@ -239,8 +219,8 @@ struct LoginView: View {
             .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.medium))
             .shadow(color: AppTheme.Colors.primaryBlue.opacity(0.5), radius: 20, y: 10)
         }
-        .disabled(email.isEmpty || password.isEmpty || authManager.authState == .authenticating)
-        .opacity((email.isEmpty || password.isEmpty || authManager.authState == .authenticating) ? 0.6 : 1.0)
+        .disabled(fullName.isEmpty || driverID.isEmpty || authManager.isLoading)
+        .opacity((fullName.isEmpty || driverID.isEmpty || authManager.isLoading) ? 0.6 : 1.0)
         .padding(.bottom, 24)
     }
 
@@ -267,35 +247,11 @@ struct LoginView: View {
         .padding(.bottom, 24)
     }
 
-    // MARK: - Demo Credentials Hint
-    private var demoCredentialsHint: some View {
-        VStack(spacing: 12) {
-            Text("Demo Credentials")
-                .font(AppTheme.Typography.caption)
-                .fontWeight(.semibold)
-                .foregroundStyle(AppTheme.Colors.textTertiary)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Email: demo@driver.com")
-                    .font(AppTheme.Typography.caption)
-                    .foregroundStyle(AppTheme.Colors.textSecondary)
-
-                Text("Password: demo")
-                    .font(AppTheme.Typography.caption)
-                    .foregroundStyle(AppTheme.Colors.textSecondary)
-            }
-            .padding(AppTheme.Spacing.sm)
-            .background(AppTheme.Colors.glassFill.opacity(0.5))
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.CornerRadius.small))
-        }
-        .padding(.top, 12)
-    }
-
     // MARK: - Actions
     private func performLogin() {
         focusedField = nil
         Task {
-            await authManager.login(email: email, password: password)
+            await authManager.login(fullName: fullName, driverID: driverID)
         }
     }
 }

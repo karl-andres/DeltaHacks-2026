@@ -9,6 +9,7 @@ import SwiftUI
 
 struct HistoryView: View {
     @EnvironmentObject var wellnessData: WellnessDataService
+    @ObservedObject var scanHistory = ScanHistoryService.shared
 
     @State private var showMetricDetail = false
     @State private var selectedMetric: MetricType?
@@ -159,63 +160,125 @@ struct HistoryView: View {
     // MARK: - Metrics History List
     private var metricsHistoryList: some View {
         VStack(spacing: 16) {
-            HistoryMetricCard(
-                icon: "heart.fill",
-                iconColor: AppTheme.Colors.roseAccent,
-                title: "Heart Rate",
-                average: "72",
-                unit: "BPM",
-                trend: "+2%",
-                trendUp: true,
-                action: {
-                    selectedMetric = .heartRate
-                    showMetricDetail = true
-                }
-            )
+            if scanHistory.scanHistory.isEmpty {
+                // Empty state
+                VStack(spacing: 12) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 50))
+                        .foregroundStyle(AppTheme.Colors.textTertiary)
 
-            HistoryMetricCard(
-                icon: "waveform.path.ecg",
-                iconColor: AppTheme.Colors.purpleAccent,
-                title: "HRV",
-                average: "98",
-                unit: "ms",
-                trend: "+5%",
-                trendUp: true,
-                action: {
-                    selectedMetric = .hrv
-                    showMetricDetail = true
-                }
-            )
+                    Text("No scan history yet")
+                        .font(AppTheme.Typography.headline)
+                        .foregroundStyle(AppTheme.Colors.textSecondary)
 
-            HistoryMetricCard(
-                icon: "wind",
-                iconColor: AppTheme.Colors.skyAccent,
-                title: "Respiration Rate",
-                average: "14",
-                unit: "brpm",
-                trend: "0%",
-                trendUp: true,
-                action: {
-                    selectedMetric = .respiration
-                    showMetricDetail = true
+                    Text("Complete your first wellness scan to see your metrics here")
+                        .font(AppTheme.Typography.callout)
+                        .foregroundStyle(AppTheme.Colors.textTertiary)
+                        .multilineTextAlignment(.center)
                 }
-            )
+                .frame(maxWidth: .infinity)
+                .padding(.top, 60)
+            } else {
+                HistoryMetricCard(
+                    icon: "heart.fill",
+                    iconColor: AppTheme.Colors.roseAccent,
+                    title: "Pulse Rate",
+                    average: "\(averagePulseRate)",
+                    unit: "BPM",
+                    trend: calculateTrend(for: \.pulse_rate),
+                    trendUp: isTrendUp(calculateTrend(for: \.pulse_rate)),
+                    action: {
+                        selectedMetric = .heartRate
+                        showMetricDetail = true
+                    }
+                )
 
-            HistoryMetricCard(
-                icon: "bolt.fill",
-                iconColor: AppTheme.Colors.primaryBlue,
-                title: "Alertness",
-                average: "85",
-                unit: "%",
-                trend: "-3%",
-                trendUp: false,
-                action: {
-                    selectedMetric = .alertness
-                    showMetricDetail = true
-                }
-            )
+                HistoryMetricCard(
+                    icon: "waveform.path.ecg",
+                    iconColor: AppTheme.Colors.purpleAccent,
+                    title: "Integrated Vital Score",
+                    average: String(format: "%.1f", averageIntegratedVitalScore),
+                    unit: "",
+                    trend: calculateTrend(for: \.integrated_vital_score),
+                    trendUp: isTrendUp(calculateTrend(for: \.integrated_vital_score)),
+                    action: {
+                        selectedMetric = .hrv
+                        showMetricDetail = true
+                    }
+                )
+
+                HistoryMetricCard(
+                    icon: "wind",
+                    iconColor: AppTheme.Colors.skyAccent,
+                    title: "Breathing Rate",
+                    average: String(format: "%.1f", averageBreathingRate),
+                    unit: "brpm",
+                    trend: calculateTrend(for: \.breathing_rate),
+                    trendUp: isTrendUp(calculateTrend(for: \.breathing_rate)),
+                    action: {
+                        selectedMetric = .respiration
+                        showMetricDetail = true
+                    }
+                )
+
+                HistoryMetricCard(
+                    icon: "bolt.fill",
+                    iconColor: AppTheme.Colors.primaryBlue,
+                    title: "Alertness Index",
+                    average: String(format: "%.1f", averageAlertnessIndex),
+                    unit: "",
+                    trend: calculateTrend(for: \.nonlinear_alertness_index),
+                    trendUp: isTrendUp(calculateTrend(for: \.nonlinear_alertness_index)),
+                    action: {
+                        selectedMetric = .alertness
+                        showMetricDetail = true
+                    }
+                )
+            }
         }
         .padding(.horizontal, AppTheme.Spacing.md)
+    }
+
+    // MARK: - Helper Methods for Metrics
+
+    private var averagePulseRate: Int {
+        guard !scanHistory.scanHistory.isEmpty else { return 0 }
+        let sum = scanHistory.scanHistory.reduce(0.0) { $0 + $1.backendResult.pulse_rate }
+        return Int(sum / Float(scanHistory.scanHistory.count))
+    }
+
+    private var averageBreathingRate: Float {
+        guard !scanHistory.scanHistory.isEmpty else { return 0 }
+        let sum = scanHistory.scanHistory.reduce(0.0) { $0 + $1.backendResult.breathing_rate }
+        return sum / Float(scanHistory.scanHistory.count)
+    }
+
+    private var averageIntegratedVitalScore: Float {
+        guard !scanHistory.scanHistory.isEmpty else { return 0 }
+        let sum = scanHistory.scanHistory.reduce(0.0) { $0 + $1.backendResult.integrated_vital_score }
+        return sum / Float(scanHistory.scanHistory.count)
+    }
+
+    private var averageAlertnessIndex: Float {
+        guard !scanHistory.scanHistory.isEmpty else { return 0 }
+        let sum = scanHistory.scanHistory.reduce(0.0) { $0 + $1.backendResult.nonlinear_alertness_index }
+        return sum / Float(scanHistory.scanHistory.count)
+    }
+
+    private func calculateTrend(for keyPath: KeyPath<BackendScanResult, Float>) -> String {
+        guard scanHistory.scanHistory.count >= 2 else { return "0%" }
+
+        let latest = scanHistory.scanHistory.first!.backendResult[keyPath: keyPath]
+        let previous = scanHistory.scanHistory[1].backendResult[keyPath: keyPath]
+
+        guard previous > 0 else { return "0%" }
+
+        let percentChange = ((latest - previous) / previous) * 100
+        return String(format: "%+.0f%%", percentChange)
+    }
+
+    private func isTrendUp(_ trend: String) -> Bool {
+        return trend.hasPrefix("+")
     }
 }
 

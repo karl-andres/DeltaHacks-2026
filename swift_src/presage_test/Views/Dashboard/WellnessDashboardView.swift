@@ -10,6 +10,7 @@ import SwiftUI
 struct WellnessDashboardView: View {
     @EnvironmentObject var biometricsVM: BiometricsViewModel
     @EnvironmentObject var wellnessData: WellnessDataService
+    @ObservedObject var scanHistory = ScanHistoryService.shared
 
     @State private var isSyncing = false
     @State private var lastSyncTime = Date()
@@ -82,30 +83,30 @@ struct WellnessDashboardView: View {
             columns: [GridItem(.flexible()), GridItem(.flexible())],
             spacing: 16
         ) {
-            // Heart Rate Card
+            // Heart Rate Card - show latest scan or current biometric
             MetricCardView(
                 icon: "heart.fill",
                 iconColor: AppTheme.Colors.roseAccent,
-                title: "Heart Rate",
-                value: "\(biometricsVM.currentHeartRate)",
+                title: "Pulse Rate",
+                value: latestPulseRate,
                 unit: "BPM",
-                status: "Resting",
-                statusColor: AppTheme.Colors.successGreen,
-                graphData: biometricsVM.heartRateHistory,
+                status: latestStatus,
+                statusColor: statusColor,
+                graphData: pulseRateHistory,
                 graphColor: AppTheme.Colors.roseAccent,
                 graphType: .line
             )
 
-            // HRV Card
+            // Integrated Vital Score Card
             MetricCardView(
                 icon: "waveform.path.ecg",
                 iconColor: AppTheme.Colors.purpleAccent,
-                title: "HRV",
-                value: "\(biometricsVM.hrvScore)",
-                unit: "ms",
-                status: "Ready",
-                statusColor: AppTheme.Colors.purpleAccent,
-                graphData: biometricsVM.hrvHistory,
+                title: "Vital Score",
+                value: latestIntegratedVitalScore,
+                unit: "",
+                status: latestStatus,
+                statusColor: statusColor,
+                graphData: integratedVitalScoreHistory,
                 graphColor: AppTheme.Colors.purpleAccent,
                 graphType: .wave
             )
@@ -114,12 +115,12 @@ struct WellnessDashboardView: View {
             MetricCardView(
                 icon: "wind",
                 iconColor: AppTheme.Colors.skyAccent,
-                title: "Resp Rate",
-                value: "\(biometricsVM.currentRespirationRate)",
+                title: "Breathing Rate",
+                value: latestBreathingRate,
                 unit: "brpm",
-                status: "Normal",
-                statusColor: AppTheme.Colors.skyAccent,
-                graphData: biometricsVM.respirationHistory,
+                status: latestStatus,
+                statusColor: statusColor,
+                graphData: breathingRateHistory,
                 graphColor: AppTheme.Colors.skyAccent,
                 graphType: .curve
             )
@@ -128,17 +129,77 @@ struct WellnessDashboardView: View {
             MetricCardView(
                 icon: "bolt.fill",
                 iconColor: AppTheme.Colors.primaryBlue,
-                title: "Alertness",
-                value: String(format: "%.0f", biometricsVM.alertnessLevel),
-                unit: "%",
-                status: AlertnessLevel.from(score: biometricsVM.alertnessLevel).rawValue,
-                statusColor: biometricsVM.alertnessLevel >= 75 ? AppTheme.Colors.primaryBlue : AppTheme.Colors.warningYellow,
-                graphData: biometricsVM.alertnessHistory,
+                title: "Alertness Index",
+                value: latestAlertnessIndex,
+                unit: "",
+                status: latestStatus,
+                statusColor: statusColor,
+                graphData: alertnessIndexHistory,
                 graphColor: AppTheme.Colors.primaryBlue,
                 graphType: .line
             )
         }
         .padding(.horizontal, AppTheme.Spacing.md)
+    }
+
+    // MARK: - Computed Properties for Latest Scan Data
+
+    private var latestPulseRate: String {
+        if let latest = scanHistory.getLatestScan() {
+            return String(format: "%.0f", latest.backendResult.pulse_rate)
+        }
+        return "\(biometricsVM.currentHeartRate)"
+    }
+
+    private var latestBreathingRate: String {
+        if let latest = scanHistory.getLatestScan() {
+            return String(format: "%.1f", latest.backendResult.breathing_rate)
+        }
+        return "\(biometricsVM.currentRespirationRate)"
+    }
+
+    private var latestIntegratedVitalScore: String {
+        if let latest = scanHistory.getLatestScan() {
+            return String(format: "%.1f", latest.backendResult.integrated_vital_score)
+        }
+        return "\(biometricsVM.hrvScore)"
+    }
+
+    private var latestAlertnessIndex: String {
+        if let latest = scanHistory.getLatestScan() {
+            return String(format: "%.1f", latest.backendResult.nonlinear_alertness_index)
+        }
+        return String(format: "%.0f", biometricsVM.alertnessLevel)
+    }
+
+    private var latestStatus: String {
+        if let latest = scanHistory.getLatestScan() {
+            return latest.status.capitalized
+        }
+        return "Ready"
+    }
+
+    private var statusColor: Color {
+        if let latest = scanHistory.getLatestScan() {
+            return latest.status == "at_risk" ? AppTheme.Colors.warningYellow : AppTheme.Colors.successGreen
+        }
+        return AppTheme.Colors.successGreen
+    }
+
+    private var pulseRateHistory: [Double] {
+        return scanHistory.scanHistory.prefix(20).reversed().map { Double($0.backendResult.pulse_rate) }
+    }
+
+    private var breathingRateHistory: [Double] {
+        return scanHistory.scanHistory.prefix(20).reversed().map { Double($0.backendResult.breathing_rate) }
+    }
+
+    private var integratedVitalScoreHistory: [Double] {
+        return scanHistory.scanHistory.prefix(20).reversed().map { Double($0.backendResult.integrated_vital_score) }
+    }
+
+    private var alertnessIndexHistory: [Double] {
+        return scanHistory.scanHistory.prefix(20).reversed().map { Double($0.backendResult.nonlinear_alertness_index) }
     }
 
     // MARK: - Sync Wearable Button
